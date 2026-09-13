@@ -1,0 +1,52 @@
+site_name: rag-score
+site_description: Framework-agnostic RAG evaluation - zero lock-in, zero forced API cost.
+site_url: https://tanishcode-12.github.io/Rag-Score/
+repo_url: https://github.com/tanishcode-12/Rag-Score
+repo_name: tanishcode-12/Rag-Score
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Metrics: metrics.md
+  - Configuration reference: configuration.md
+  - Framework adapters: adapters.md
+  - API reference: api-reference.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - tables

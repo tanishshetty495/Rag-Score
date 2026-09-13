@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/adapters/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/api-reference/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/configuration/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/metrics/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+    <url>
+         <loc>https://tanishcode-12.github.io/Rag-Score/quickstart/</loc>
+         <lastmod>2026-09-13</lastmod>
+    </url>
+</urlset>

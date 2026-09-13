@@ -1,0 +1,62 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest config/script that reproduces it. Include your eval config (redact any API keys) if relevant.
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: rag-score version
+      description: Run `pip show rag-score` to find this.
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: Run `python --version`.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installed extras
+      description: Which optional extras did you install?
+      multiple: true
+      options:
+        - "none (core only)"
+        - openai
+        - anthropic
+        - langchain
+        - llamaindex
+        - report
+        - bi
+        - yaml
+        - "all"
+    validations:
+      required: false
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Full traceback
+      description: Paste the complete error output, if any.
+      render: shell

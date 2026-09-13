@@ -47,7 +47,11 @@ def load_dataset(path: str | Path, dataset_name: str | None = None) -> list[Test
             raw = json.load(f)
 
     if not isinstance(raw, list):
-        raise ValueError(
+        # ValueError, not TypeError, is intentional here - it's part of
+        # this function's documented and tested contract (see
+        # tests/test_dataset.py::test_non_list_json_raises), consistent
+        # with the other validation errors load_dataset raises.
+        raise ValueError(  # noqa: TRY004
             f"Dataset file {path} must contain a JSON/YAML list of test cases, "
             f"got {type(raw).__name__}"
         )

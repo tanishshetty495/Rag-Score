@@ -1,0 +1,41 @@
+name: Publish to PyPI
+
+# Runs when you publish a GitHub Release (not on every push) - this is
+# the standard trigger for a package release workflow, so a routine
+# commit never accidentally ships a new PyPI version.
+"on":
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    # Trusted publishing needs this permission to request a short-lived
+    # OIDC token from GitHub - no PyPI API token stored as a secret.
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/p/rag-score
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tool
+        run: pip install build
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Check package metadata
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

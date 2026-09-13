@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest a new metric, adapter, or capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you trying to do that rag-score doesn't currently support?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you want the API/CLI to look like? A rough config or code snippet is great.
+      render: python
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this touch?
+      options:
+        - New metric (retrieval)
+        - New metric (generation / LLM-judge)
+        - New framework adapter
+        - CLI
+        - Export (SQLite/Pandas)
+        - HTML report
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you're currently using instead?

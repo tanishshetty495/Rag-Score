@@ -45,7 +45,10 @@ def scores_to_wide_dataframe(report: RunReport):
     """One row per evaluation, one column per metric - the pivoted view
     people usually want for a quick df.describe() or a scatter plot of
     two metrics against each other."""
-    pd = _require_pandas()
+    # Calling for the side effect of raising early if pandas isn't
+    # installed - scores_to_dataframe() below does its own import, but
+    # failing fast here gives a clearer stack trace than deep inside it.
+    _require_pandas()
     long_df = scores_to_dataframe(report)
     if long_df.empty:
         return long_df

@@ -88,7 +88,10 @@ async def main() -> None:
 
     print(f"Evaluated {len(report.results)} test cases\n")
     for result in report.results:
-        print(f"Q: {[tc.question for tc in test_cases if tc.test_case_id == result.test_case_id][0]}")
+        question = next(
+            tc.question for tc in test_cases if tc.test_case_id == result.test_case_id
+        )
+        print(f"Q: {question}")
         print(f"A: {result.generated_answer}\n")
 
     by_metric: dict[str, list[float]] = {}

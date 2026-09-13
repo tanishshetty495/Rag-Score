@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/tanishcode-12/Rag-Score/discussions
+    about: For usage questions or general discussion rather than a bug/feature request.
