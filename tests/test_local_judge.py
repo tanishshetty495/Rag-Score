@@ -9,7 +9,7 @@ import pytest
 
 openai = pytest.importorskip("openai")
 
-from rag_score.judges.local_judge import LocalJudge  # noqa: E402
+from rag_score.judges.local_judge import LocalJudge
 
 
 class TestLocalJudgeConstruction:

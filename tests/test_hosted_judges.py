@@ -12,8 +12,8 @@ import pytest
 openai = pytest.importorskip("openai")
 anthropic = pytest.importorskip("anthropic")
 
-from rag_score.judges.anthropic_judge import AnthropicJudge  # noqa: E402
-from rag_score.judges.openai_judge import OpenAIJudge  # noqa: E402
+from rag_score.judges.anthropic_judge import AnthropicJudge
+from rag_score.judges.openai_judge import OpenAIJudge
 
 
 class TestOpenAIJudgeConstruction:

@@ -11,7 +11,7 @@ import pytest
 
 from rag_score.adapters.base import CallableGeneratorAdapter, CallableRetrieverAdapter
 from rag_score.core.types import EvalResult, RetrievedChunk, TestCase
-from rag_score.judges.base import JudgeVerdict, LLMJudge
+from rag_score.judges.base import LLMJudge
 
 
 @pytest.fixture

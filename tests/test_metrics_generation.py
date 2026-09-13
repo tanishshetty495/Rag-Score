@@ -5,7 +5,7 @@ model's judgment quality."""
 
 from __future__ import annotations
 
-from rag_score.core.types import EvalResult, RetrievedChunk, TestCase
+from rag_score.core.types import EvalResult, RetrievedChunk
 from rag_score.metrics.generation.answer_relevance import AnswerRelevance
 from rag_score.metrics.generation.context_precision import ContextPrecision
 from rag_score.metrics.generation.faithfulness import Faithfulness

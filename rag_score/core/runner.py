@@ -61,7 +61,7 @@ async def _run_single(
             result.generation_latency_ms = (time.perf_counter() - t1) * 1000
             result.generated_answer = answer
 
-        except Exception as exc:  # noqa: BLE001 - deliberately broad, see continue_on_error
+        except Exception as exc:
             result.error = f"{type(exc).__name__}: {exc}"
             if not config.continue_on_error:
                 raise
@@ -77,19 +77,16 @@ async def _score_result(
         # and look like a genuinely bad answer rather than a crash.
         return []
 
-    async def _score_one(m: Metric) -> MetricScore:
-        if hasattr(m, "score_with_reasoning"):
-            s, reasoning = await m.score_with_reasoning(test_case, result)
-        else:
-            s, reasoning = await m.score(test_case, result), None
-        return MetricScore(
+    scored = await asyncio.gather(*(m.score_with_reasoning(test_case, result) for m in metrics))
+    return [
+        MetricScore(
             evaluation_id=result.evaluation_id,
             metric_name=m.name,
-            score_value=s,
+            score_value=score,
             judge_reasoning=reasoning,
         )
-
-    return list(await asyncio.gather(*(_score_one(m) for m in metrics)))
+        for m, (score, reasoning) in zip(metrics, scored)
+    ]
 
 
 async def run_evaluation(

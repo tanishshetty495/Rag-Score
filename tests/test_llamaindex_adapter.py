@@ -8,10 +8,10 @@ import pytest
 
 llama_index_core = pytest.importorskip("llama_index.core")
 
-from llama_index.core.base.base_retriever import BaseRetriever  # noqa: E402
-from llama_index.core.schema import NodeWithScore, TextNode  # noqa: E402
+from llama_index.core.base.base_retriever import BaseRetriever
+from llama_index.core.schema import NodeWithScore, TextNode
 
-from rag_score.adapters.llamaindex_adapter import (  # noqa: E402
+from rag_score.adapters.llamaindex_adapter import (
     LlamaIndexGeneratorAdapter,
     LlamaIndexRetrieverAdapter,
 )
