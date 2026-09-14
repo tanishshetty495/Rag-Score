@@ -54,13 +54,21 @@ class LLMJudge(ABC):
         return _parse_verdict(raw)
 
 
-# Judge prompts ask for JSON but models often wrap it in ```json fences
-# or add a little prose around it - this strips both before parsing.
+# Judge/synthesis prompts ask for JSON but models often wrap it in
+# ```json fences or add a little prose around it - this strips both
+# before parsing. Shared by _parse_verdict() here and the synthesis
+# module's question/answer parsing, since both face the exact same
+# "model didn't return clean JSON" problem.
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 _BRACE_SPAN_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
-def _parse_verdict(raw: str) -> JudgeVerdict:
+def extract_json_object(raw: str) -> dict:
+    """Best-effort extraction of a JSON object from raw LLM text:
+    strips markdown code fences if present, then falls back to
+    grabbing the first {...} span if the response has extra prose
+    around the JSON. Raises ValueError if no parseable object is found.
+    """
     text = raw.strip()
 
     fence_match = _JSON_FENCE_RE.search(text)
@@ -68,17 +76,18 @@ def _parse_verdict(raw: str) -> JudgeVerdict:
         text = fence_match.group(1).strip()
 
     try:
-        data = json.loads(text)
+        return json.loads(text)
     except json.JSONDecodeError:
-        # Last resort: grab the first {...} span in the response and
-        # try that, in case the model added a sentence before/after.
         brace_match = _BRACE_SPAN_RE.search(text)
         if not brace_match:
             raise ValueError(
-                f"Judge response was not valid JSON and contained no "
-                f"parseable object: {raw!r}"
+                f"Response was not valid JSON and contained no parseable object: {raw!r}"
             ) from None
-        data = json.loads(brace_match.group(0))
+        return json.loads(brace_match.group(0))
+
+
+def _parse_verdict(raw: str) -> JudgeVerdict:
+    data = extract_json_object(raw)
 
     if "score" not in data or "reasoning" not in data:
         raise ValueError(

@@ -47,6 +47,7 @@ from rag_score.metrics.retrieval.ndcg import NDCG
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 from rag_score.metrics.retrieval.recall_at_k import RecallAtK
 from rag_score.report.html_report import generate_html_report
+from rag_score.synthesize import load_documents_from_dir, synthesize_test_set
 
 # ---------------------------------------------------------------------------
 # Config loading
@@ -324,6 +325,77 @@ def run(config_path: str) -> None:
     if html_output:
         written = generate_html_report(html_output, dim_run, test_cases, report)
         click.echo(f"HTML report written to {written}")
+
+
+@cli.command()
+@click.argument("docs_dir", type=click.Path(exists=True, file_okay=False))
+@click.option("--output", "-o", default="test_set.json", help="Where to write the generated test set.")
+@click.option("--judge", "judge_json", required=True, help='Judge config as JSON, e.g. \'{"provider": "anthropic", "model": "claude-haiku-4-5"}\'')
+@click.option("--chunk-size", default=500, show_default=True, help="Words per chunk.")
+@click.option("--chunk-overlap", default=50, show_default=True, help="Overlapping words between consecutive chunks.")
+@click.option("--questions-per-chunk", default=1, show_default=True, help="How many questions to generate per chunk.")
+@click.option("--max-concurrency", default=5, show_default=True, help="Concurrent judge calls.")
+def synthesize(
+    docs_dir: str,
+    output: str,
+    judge_json: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    questions_per_chunk: int,
+    max_concurrency: int,
+) -> None:
+    """Generate a synthetic test_set.json from a directory of .txt/.md documents.
+
+    Example:
+        rageval synthesize ./docs --judge '{"provider": "anthropic"}' --output test_set.json
+    """
+    try:
+        judge_config = json.loads(judge_json)
+    except json.JSONDecodeError as e:
+        raise click.ClickException(f"--judge must be valid JSON: {e}") from None
+
+    judge = _build_judge(judge_config)
+    if judge is None:
+        raise click.ClickException("--judge config resolved to no judge - check the provider field.")
+
+    documents = load_documents_from_dir(docs_dir)
+    if not documents:
+        raise click.ClickException(f"No .txt or .md files found in {docs_dir}")
+
+    click.echo(f"Loaded {len(documents)} document(s) from {docs_dir}")
+    click.echo(f"Chunking at {chunk_size} words (overlap {chunk_overlap}) and generating questions...")
+
+    try:
+        report = asyncio.run(
+            synthesize_test_set(
+                documents,
+                judge,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                questions_per_chunk=questions_per_chunk,
+                max_concurrency=max_concurrency,
+            )
+        )
+    except ValueError as e:
+        # Chunking parameter validation (e.g. overlap >= chunk_size) -
+        # a user config mistake, not a bug, so no traceback needed.
+        raise click.ClickException(str(e)) from None
+
+    if not report.test_cases:
+        raise click.ClickException(
+            f"Synthesis produced zero test cases ({len(report.errors)} chunk(s) failed). "
+            f"First error: {report.errors[0] if report.errors else 'unknown'}"
+        )
+
+    payload = [tc.model_dump(mode="json") for tc in report.test_cases]
+    Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    click.echo(f"\nGenerated {len(report.test_cases)} test case(s), {len(report.errors)} chunk(s) failed")
+    click.echo(f"Written to {output}")
+    if report.errors:
+        click.echo("\nFailed chunks:")
+        for err in report.errors:
+            click.echo(f"  {err}")
 
 
 def main() -> None:

@@ -77,6 +77,7 @@ Open `report.html` - it's a single self-contained file, no server required.
 
 ## Next steps
 
+- Don't have a test set yet? [Generate one from your own docs](configuration.md#rageval-synthesize) with `rageval synthesize`
 - Add [LLM-judge metrics](metrics.md#llm-judge-metrics) for faithfulness and relevance scoring
 - Plug in your [LangChain or LlamaIndex](adapters.md) pipeline directly instead of writing wrapper functions
 - Export to [SQLite or Pandas](configuration.md#export-options) for tracking scores across runs

@@ -65,3 +65,22 @@ All three can be set at once; each is independent.
   "project_name": "my-rag-app"
 }
 ```
+
+## `rageval synthesize`
+
+Generates a test set from raw documents instead of writing one by hand. This is a separate CLI command, not a config field:
+
+```bash
+rageval synthesize <docs_dir> --judge '{"provider": "anthropic"}' [options]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--output` / `-o` | `test_set.json` | Where to write the generated test set. |
+| `--judge` | *(required)* | Same JSON shape as the `judge` config field above. |
+| `--chunk-size` | `500` | Words per chunk. |
+| `--chunk-overlap` | `50` | Overlapping words between consecutive chunks. Must be smaller than `--chunk-size`. |
+| `--questions-per-chunk` | `1` | How many question/answer pairs to generate per chunk. |
+| `--max-concurrency` | `5` | Concurrent judge calls. |
+
+Only `.txt` and `.md` files in `<docs_dir>` are read (non-recursive). See [`synthesize_test_set`][rag_score.synthesize.synthesize_test_set] for the Python API if you want to call this from code instead of the CLI - e.g. to pass in documents loaded from somewhere other than a local directory.

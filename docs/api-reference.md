@@ -48,6 +48,13 @@ Auto-generated from docstrings in the source.
 ::: rag_score.export.dataframe_export.scores_to_wide_dataframe
 ::: rag_score.export.dataframe_export.full_report_dataframe
 
+## Synthesis
+
+::: rag_score.synthesize.synthesize_test_set
+::: rag_score.synthesize.chunk_text
+::: rag_score.synthesize.load_documents_from_dir
+::: rag_score.synthesize.SynthesisReport
+
 ## Report
 
 ::: rag_score.report.html_report.generate_html_report
