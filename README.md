@@ -201,9 +201,22 @@ from rag_score.judges.local_judge import LocalJudge
 judge = LocalJudge(model="llama3.1")  # defaults to http://localhost:11434/v1 (Ollama)
 ```
 
+## Local ML metrics (no LLM at all)
+
+`local_faithfulness` and `local_answer_relevance` go further than the Ollama judge above - no LLM, no inference server, just a small embedding model computing semantic similarity locally:
+
+```bash
+pip install rag-score[local-ml]
+```
+
+```json
+{ "...": "...", "metrics": ["local_faithfulness", "local_answer_relevance"] }
+```
+
+The model (`all-MiniLM-L6-v2` by default, [sentence-transformers](https://www.sbert.net/)) downloads once on first use, then runs fully offline. This trades some accuracy for speed and zero cost - cosine similarity catches "the answer is about something completely different" reliably, but won't reason about factual correctness the way an LLM judge can. Use it as a fast free first pass, or alongside `faithfulness`/`answer_relevance` rather than as a strict replacement for them.
+
 ## Roadmap
 
-- [ ] Local-first DL judges (embedding/NLI models) for offline faithfulness scoring
 - [ ] Agentic trajectory evaluation (multi-step tool calls, routing)
 
 ## Why not Ragas / TruLens / DeepEval?

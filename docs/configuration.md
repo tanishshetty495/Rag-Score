@@ -22,6 +22,7 @@ Every field accepted by `eval_config.json` / `eval_config.yaml`, passed to `rage
 | `sqlite_output` | string | none | Path to a `.db` file - see [Export options](#export-options). |
 | `html_output` | string | none | Path to write a self-contained `report.html`. |
 | `environment` | string | `"local"` | Recorded in the SQLite export; useful for distinguishing local runs from CI runs. |
+| `encoder_model` | string | `"all-MiniLM-L6-v2"` | Sentence-transformers model name used by `local_faithfulness`/`local_answer_relevance` (requires `pip install rag-score[local-ml]`). Ignored if those metrics aren't requested. |
 
 ## `judge`
 

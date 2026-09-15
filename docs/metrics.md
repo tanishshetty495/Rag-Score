@@ -36,6 +36,26 @@ These two metrics are deliberately independent, and reading them together tells 
 - **High faithfulness, low relevance**: the answer is grounded in the retrieved context, but that context was the wrong context - a retrieval problem.
 - **Low faithfulness, high relevance**: the answer addresses the question but invents details not in the context - a generation/hallucination problem.
 
+## Local ML metrics (no LLM, no API, no server)
+
+```bash
+pip install rag-score[local-ml]
+```
+
+| Metric name | Class | What it measures |
+|---|---|---|
+| `local_faithfulness` | [`LocalSemanticFaithfulness`][rag_score.metrics.generation.local_faithfulness.LocalSemanticFaithfulness] | Cosine similarity between the answer and retrieved context |
+| `local_answer_relevance` | [`LocalSemanticAnswerRelevance`][rag_score.metrics.generation.local_answer_relevance.LocalSemanticAnswerRelevance] | Cosine similarity between the question and answer |
+
+These use a local embedding model ([sentence-transformers](https://www.sbert.net/), `all-MiniLM-L6-v2` by default) instead of an LLM judge - no API key, no inference server, and no network access after the model's first download. They're a weaker signal than the LLM-judge equivalents (semantic similarity isn't the same as logical entailment or factual correctness) but are free and fast enough to run on every single test case as a first pass.
+
+Override the model with `encoder_model` in your config, or pass `model_name=` directly in Python:
+
+```python
+from rag_score.metrics.generation.local_faithfulness import LocalSemanticFaithfulness
+metric = LocalSemanticFaithfulness(model_name="all-mpnet-base-v2")  # larger, more accurate, slower
+```
+
 ## Writing a custom metric
 
-See [Contributing](https://github.com/tanishcode-12/Rag-Score/blob/main/CONTRIBUTING.md#adding-a-new-metric) for the full guide. In short: subclass [`Metric`][rag_score.metrics.base.Metric], implement `async def score(...)`, and register it in the CLI's metric-name resolution if you want it usable from a config file.
+See [Contributing](https://github.com/tanishshetty495/Rag-Score/blob/main/CONTRIBUTING.md#adding-a-new-metric) for the full guide. In short: subclass [`Metric`][rag_score.metrics.base.Metric], implement `async def score(...)`, and register it in the CLI's metric-name resolution if you want it usable from a config file.
