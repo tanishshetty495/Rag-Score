@@ -42,6 +42,10 @@ from rag_score.metrics.base import Metric
 from rag_score.metrics.generation.answer_relevance import AnswerRelevance
 from rag_score.metrics.generation.context_precision import ContextPrecision
 from rag_score.metrics.generation.faithfulness import Faithfulness
+from rag_score.metrics.generation.local_answer_relevance import (
+    LocalSemanticAnswerRelevance,
+)
+from rag_score.metrics.generation.local_faithfulness import LocalSemanticFaithfulness
 from rag_score.metrics.retrieval.mrr import MRR
 from rag_score.metrics.retrieval.ndcg import NDCG
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
@@ -179,8 +183,13 @@ _JUDGE_METRICS: dict[str, type[Metric]] = {
     "context_precision": ContextPrecision,
 }
 
+_LOCAL_ML_METRICS: dict[str, type[Metric]] = {
+    "local_faithfulness": LocalSemanticFaithfulness,
+    "local_answer_relevance": LocalSemanticAnswerRelevance,
+}
 
-def _build_metric(name: str, judge: LLMJudge | None) -> Metric:
+
+def _build_metric(name: str, judge: LLMJudge | None, encoder_model: str | None = None) -> Metric:
     name = name.strip().lower()
     if name == "mrr":
         return MRR()
@@ -192,6 +201,9 @@ def _build_metric(name: str, judge: LLMJudge | None) -> Metric:
                 f'  judge: {{"provider": "openai", "model": "gpt-4o-mini"}}'
             )
         return _JUDGE_METRICS[name](judge=judge)
+    if name in _LOCAL_ML_METRICS:
+        kwargs = {"model_name": encoder_model} if encoder_model else {}
+        return _LOCAL_ML_METRICS[name](**kwargs)
     for prefix, cls in _K_PREFIXES.items():
         if name.startswith(prefix):
             suffix = name[len(prefix):]
@@ -200,7 +212,8 @@ def _build_metric(name: str, judge: LLMJudge | None) -> Metric:
             return cls(k=int(suffix))
     raise click.ClickException(
         f"Unknown metric '{name}'. Available: precision_at_<k>, recall_at_<k>, mrr, "
-        f"ndcg_at_<k>, faithfulness, answer_relevance, context_precision"
+        f"ndcg_at_<k>, faithfulness, answer_relevance, context_precision, "
+        f"local_faithfulness, local_answer_relevance"
     )
 
 
@@ -275,7 +288,8 @@ def run(config_path: str) -> None:
     retriever = _resolve_retriever(config["retriever"])
     generator = _resolve_generator(config["generator"])
     judge = _build_judge(config.get("judge"))
-    metrics = [_build_metric(name, judge) for name in config["metrics"]]
+    encoder_model = config.get("encoder_model")
+    metrics = [_build_metric(name, judge, encoder_model) for name in config["metrics"]]
 
     run_config = RunConfig(
         run_id=f"run-{Path(config_path).stem}",
@@ -285,7 +299,22 @@ def run(config_path: str) -> None:
     )
 
     click.echo(f"Running {len(test_cases)} test cases with {len(metrics)} metrics...")
-    report = asyncio.run(run_evaluation(test_cases, retriever, generator, metrics, run_config))
+    try:
+        report = asyncio.run(run_evaluation(test_cases, retriever, generator, metrics, run_config))
+    except Exception as e:  # noqa: BLE001 - intentionally broad, see comment below
+        # A metric raising (e.g. a local ML model failing to download,
+        # no network for an API judge) isn't isolated per-test-case the
+        # way retrieval/generation failures are - it aborts the whole
+        # run. Surface it as a clean error here rather than a raw
+        # traceback through library internals.
+        raise click.ClickException(
+            f"Evaluation failed: {type(e).__name__}: {e}\n\n"
+            f"If this is a local ML metric (local_faithfulness, "
+            f"local_answer_relevance), the model may need to download on "
+            f"first use - check your internet connection, or pre-download "
+            f"it with: python -c \"from sentence_transformers import "
+            f"SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')\""
+        ) from None
 
     num_errors = sum(1 for r in report.results if r.error is not None)
     summary = _summarize(report.scores, len(report.results), num_errors)
