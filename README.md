@@ -215,9 +215,42 @@ pip install rag-score[local-ml]
 
 The model (`all-MiniLM-L6-v2` by default, [sentence-transformers](https://www.sbert.net/)) downloads once on first use, then runs fully offline. This trades some accuracy for speed and zero cost - cosine similarity catches "the answer is about something completely different" reliably, but won't reason about factual correctness the way an LLM judge can. Use it as a fast free first pass, or alongside `faithfulness`/`answer_relevance` rather than as a strict replacement for them.
 
+## Agentic trajectory evaluation
+
+Evaluating a multi-step agent (one that calls tools before answering) instead of a single retrieve-then-generate pass? `rageval run-trajectory` is a separate command for that:
+
+```python
+# my_agent.py
+from rag_score.agentic.types import ToolCall
+
+async def my_agent(query: str) -> tuple[list[ToolCall], str]:
+    # call your actual agent here - LangGraph, a custom loop, whatever
+    return [ToolCall(tool_name="search", tool_output="...")], "the final answer"
+```
+
+```json
+{
+  "dataset": "trajectory_test_set.json",
+  "agent": "my_agent:my_agent",
+  "metrics": ["tool_selection_recall", "tool_selection_precision", "tool_call_order_correctness"]
+}
+```
+
+```bash
+rageval run-trajectory eval_config.json
+```
+
+| Metric | What it measures |
+|---|---|
+| `tool_selection_recall` | Of the expected tools, what fraction did the agent actually call? |
+| `tool_selection_precision` | Of the tools the agent called, what fraction were actually expected? |
+| `tool_call_order_correctness` | Were the expected tools called in the right relative order (extra calls in between are fine)? |
+
+All three are offline (zero API keys) and mirror the naming/semantics of the single-shot retrieval metrics deliberately - same questions, applied to a sequence of tool names instead of a set of retrieved doc IDs. See `examples/agentic_example.py` for a full runnable version.
+
 ## Roadmap
 
-- [ ] Agentic trajectory evaluation (multi-step tool calls, routing)
+Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Why not Ragas / TruLens / DeepEval?
 

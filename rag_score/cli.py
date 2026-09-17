@@ -33,6 +33,13 @@ from rag_score.adapters.base import (
     GeneratorAdapter,
     RetrieverAdapter,
 )
+from rag_score.agentic.adapters import AgentAdapter, CallableAgentAdapter
+from rag_score.agentic.metrics.tool_call_order import ToolCallOrderCorrectness
+from rag_score.agentic.metrics.tool_selection_precision import ToolSelectionPrecision
+from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
+from rag_score.agentic.metrics_base import TrajectoryMetric
+from rag_score.agentic.runner import TrajectoryRunConfig, run_trajectory_evaluation
+from rag_score.agentic.types import load_trajectory_dataset
 from rag_score.core.dataset import load_dataset
 from rag_score.core.runner import RunConfig, run_evaluation
 from rag_score.core.types import DimRun
@@ -118,6 +125,13 @@ def _resolve_generator(ref: str) -> GeneratorAdapter:
     if isinstance(obj, GeneratorAdapter):
         return obj
     return CallableGeneratorAdapter(obj)
+
+
+def _resolve_agent(ref: str) -> AgentAdapter:
+    obj = _import_from_string(ref)
+    if isinstance(obj, AgentAdapter):
+        return obj
+    return CallableAgentAdapter(obj)
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +439,88 @@ def synthesize(
         click.echo("\nFailed chunks:")
         for err in report.errors:
             click.echo(f"  {err}")
+
+
+
+
+
+
+# ---------------------------------------------------------------------------
+# Trajectory metric name -> instance resolution
+# ---------------------------------------------------------------------------
+
+_TRAJECTORY_METRICS: dict[str, type[TrajectoryMetric]] = {
+    "tool_selection_recall": ToolSelectionRecall,
+    "tool_selection_precision": ToolSelectionPrecision,
+    "tool_call_order_correctness": ToolCallOrderCorrectness,
+}
+
+
+def _build_trajectory_metric(name: str) -> TrajectoryMetric:
+    name = name.strip().lower()
+    if name in _TRAJECTORY_METRICS:
+        return _TRAJECTORY_METRICS[name]()
+    raise click.ClickException(
+        f"Unknown trajectory metric '{name}'. Available: "
+        f"{', '.join(_TRAJECTORY_METRICS.keys())}"
+    )
+
+
+@cli.command(name="run-trajectory")
+@click.argument("config_path", type=click.Path(exists=True))
+def run_trajectory(config_path: str) -> None:
+    """Run an agentic trajectory evaluation from a YAML or JSON config file.
+
+    Config format:
+        dataset: trajectory_test_set.json
+        agent: my_module:my_agent          # "module.path:attribute"
+        metrics: [tool_selection_recall, tool_selection_precision, tool_call_order_correctness]
+        max_concurrency: 8
+        output: results.json               # optional, raw per-row dump
+
+    Unlike `run`, there's no separate retriever/generator - `agent`
+    resolves to a function/AgentAdapter that takes a query and returns
+    the full (tool_calls, final_answer) trajectory in one call, since
+    the tool-calling loop is internal to the agent itself.
+    """
+    config = _load_config(config_path)
+
+    required = ["dataset", "agent", "metrics"]
+    missing = [k for k in required if k not in config]
+    if missing:
+        raise click.ClickException(f"Config is missing required field(s): {', '.join(missing)}")
+
+    test_cases = load_trajectory_dataset(config["dataset"])
+    agent = _resolve_agent(config["agent"])
+    metrics = [_build_trajectory_metric(name) for name in config["metrics"]]
+
+    run_config = TrajectoryRunConfig(
+        run_id=f"run-{Path(config_path).stem}",
+        project_name=config.get("project_name", "default"),
+        max_concurrency=config.get("max_concurrency", 8),
+    )
+
+    click.echo(f"Running {len(test_cases)} test cases with {len(metrics)} metrics...")
+    try:
+        report = asyncio.run(run_trajectory_evaluation(test_cases, agent, metrics, run_config))
+    except Exception as e:  # noqa: BLE001 - intentionally broad, mirrors `run`'s error wrapping
+        raise click.ClickException(f"Evaluation failed: {type(e).__name__}: {e}") from None
+
+    num_errors = sum(1 for r in report.results if r.error is not None)
+    summary = _summarize(report.scores, len(report.results), num_errors)
+    _print_summary(summary, len(report.results), num_errors)
+    _write_github_step_summary(summary, len(report.results), num_errors)
+
+    output_path = config.get("output")
+    if output_path:
+        payload = {
+            "run_id": report.run_id,
+            "summary": summary,
+            "results": [r.model_dump(mode="json") for r in report.results],
+            "scores": [s.model_dump(mode="json") for s in report.scores],
+        }
+        Path(output_path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        click.echo(f"\nFull results written to {output_path}")
 
 
 def main() -> None:

@@ -57,6 +57,20 @@ Auto-generated from docstrings in the source.
 ::: rag_score.synthesize.load_documents_from_dir
 ::: rag_score.synthesize.SynthesisReport
 
+## Agentic trajectory evaluation
+
+::: rag_score.agentic.types.ToolCall
+::: rag_score.agentic.types.TrajectoryTestCase
+::: rag_score.agentic.types.TrajectoryEvalResult
+::: rag_score.agentic.types.load_trajectory_dataset
+::: rag_score.agentic.adapters.AgentAdapter
+::: rag_score.agentic.runner.run_trajectory_evaluation
+::: rag_score.agentic.runner.TrajectoryRunConfig
+::: rag_score.agentic.metrics_base.TrajectoryMetric
+::: rag_score.agentic.metrics.tool_selection_recall.ToolSelectionRecall
+::: rag_score.agentic.metrics.tool_selection_precision.ToolSelectionPrecision
+::: rag_score.agentic.metrics.tool_call_order.ToolCallOrderCorrectness
+
 ## Report
 
 ::: rag_score.report.html_report.generate_html_report

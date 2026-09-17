@@ -1,8 +1,8 @@
 site_name: rag-score
 site_description: Framework-agnostic RAG evaluation - zero lock-in, zero forced API cost.
-site_url: https://tanishcode-12.github.io/Rag-Score/
-repo_url: https://github.com/tanishcode-12/Rag-Score
-repo_name: tanishcode-12/Rag-Score
+site_url: https://tanishshetty495.github.io/Rag-Score/
+repo_url: https://github.com/tanishshetty495/Rag-Score
+repo_name: tanishshetty495/Rag-Score
 
 theme:
   name: material
@@ -32,6 +32,7 @@ nav:
   - Metrics: metrics.md
   - Configuration reference: configuration.md
   - Framework adapters: adapters.md
+  - Agentic trajectory evaluation: agentic.md
   - API reference: api-reference.md
 
 plugins:

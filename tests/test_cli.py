@@ -175,3 +175,76 @@ class TestSynthesizeCommand:
             assert result.exit_code != 0
             assert "overlap must be smaller than chunk_size" in result.output
             assert "Traceback" not in result.output
+
+
+def _write_demo_agent() -> None:
+    with open("demo_agent.py", "w") as f:
+        f.write(
+            "async def my_agent(query):\n"
+            "    from rag_score.agentic.types import ToolCall\n"
+            "    return [ToolCall(tool_name='search')], 'an answer'\n"
+        )
+    with open("trajectory_test_set.json", "w") as f:
+        json.dump([{"question": "q?", "expected_tool_sequence": ["search"]}], f)
+
+
+class TestRunTrajectoryCommand:
+    def test_happy_path_end_to_end(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            _write_demo_agent()
+            with open("config.json", "w") as f:
+                json.dump({
+                    "dataset": "trajectory_test_set.json",
+                    "agent": "demo_agent:my_agent",
+                    "metrics": ["tool_selection_recall", "tool_selection_precision", "tool_call_order_correctness"],
+                }, f)
+            result = runner.invoke(cli, ["run-trajectory", "config.json"])
+            assert result.exit_code == 0
+            assert "tool_selection_recall" in result.output
+            assert "1.000" in result.output
+
+    def test_missing_required_field_is_clean_error(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            _write_demo_agent()
+            with open("config.json", "w") as f:
+                json.dump({"dataset": "trajectory_test_set.json", "metrics": ["tool_selection_recall"]}, f)
+            result = runner.invoke(cli, ["run-trajectory", "config.json"])
+            assert result.exit_code != 0
+            assert "missing required field" in result.output
+            assert "agent" in result.output
+
+    def test_unknown_metric_is_clean_error(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            _write_demo_agent()
+            with open("config.json", "w") as f:
+                json.dump({
+                    "dataset": "trajectory_test_set.json",
+                    "agent": "demo_agent:my_agent",
+                    "metrics": ["not_a_real_metric"],
+                }, f)
+            result = runner.invoke(cli, ["run-trajectory", "config.json"])
+            assert result.exit_code != 0
+            assert "Unknown trajectory metric" in result.output
+
+    def test_output_file_is_written(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            _write_demo_agent()
+            with open("config.json", "w") as f:
+                json.dump({
+                    "dataset": "trajectory_test_set.json",
+                    "agent": "demo_agent:my_agent",
+                    "metrics": ["tool_selection_recall"],
+                    "output": "results.json",
+                }, f)
+            result = runner.invoke(cli, ["run-trajectory", "config.json"])
+            assert result.exit_code == 0
+            assert os.path.exists("results.json")
+            with open("results.json") as f:
+                payload = json.load(f)
+            assert "summary" in payload
+            assert "results" in payload
