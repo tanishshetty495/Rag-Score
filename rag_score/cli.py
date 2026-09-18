@@ -146,10 +146,19 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
     model = judge_config.get("model")
     api_key = judge_config.get("api_key")  # falls back to provider's env var if omitted
 
+    # Shared by every provider - only pass through what's actually set,
+    # so each judge class's own defaults (2 retries, 1s base delay)
+    # still apply when the config leaves these unspecified.
+    retry_kwargs: dict[str, Any] = {}
+    if "max_retries" in judge_config:
+        retry_kwargs["max_retries"] = judge_config["max_retries"]
+    if "retry_base_delay" in judge_config:
+        retry_kwargs["retry_base_delay"] = judge_config["retry_base_delay"]
+
     if provider == "openai":
         from rag_score.judges.openai_judge import OpenAIJudge
 
-        kwargs = {"api_key": api_key}
+        kwargs = {"api_key": api_key, **retry_kwargs}
         if model:
             kwargs["model"] = model
         return OpenAIJudge(**kwargs)
@@ -157,7 +166,7 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
     if provider == "anthropic":
         from rag_score.judges.anthropic_judge import AnthropicJudge
 
-        kwargs = {"api_key": api_key}
+        kwargs = {"api_key": api_key, **retry_kwargs}
         if model:
             kwargs["model"] = model
         return AnthropicJudge(**kwargs)
@@ -170,7 +179,7 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
                 "The 'local' judge provider requires a 'model' field, e.g. "
                 '"model": "llama3.1" (the model name as your local server knows it).'
             )
-        kwargs = {"model": model}
+        kwargs = {"model": model, **retry_kwargs}
         base_url = judge_config.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
@@ -314,7 +323,13 @@ def run(config_path: str) -> None:
 
     click.echo(f"Running {len(test_cases)} test cases with {len(metrics)} metrics...")
     try:
-        report = asyncio.run(run_evaluation(test_cases, retriever, generator, metrics, run_config))
+        with click.progressbar(length=len(test_cases), label="Evaluating") as bar:
+            report = asyncio.run(
+                run_evaluation(
+                    test_cases, retriever, generator, metrics, run_config,
+                    on_progress=lambda: bar.update(1),
+                )
+            )
     except Exception as e:  # noqa: BLE001 - intentionally broad, see comment below
         # A metric raising (e.g. a local ML model failing to download,
         # no network for an API judge) isn't isolated per-test-case the
@@ -502,7 +517,13 @@ def run_trajectory(config_path: str) -> None:
 
     click.echo(f"Running {len(test_cases)} test cases with {len(metrics)} metrics...")
     try:
-        report = asyncio.run(run_trajectory_evaluation(test_cases, agent, metrics, run_config))
+        with click.progressbar(length=len(test_cases), label="Evaluating") as bar:
+            report = asyncio.run(
+                run_trajectory_evaluation(
+                    test_cases, agent, metrics, run_config,
+                    on_progress=lambda: bar.update(1),
+                )
+            )
     except Exception as e:  # noqa: BLE001 - intentionally broad, mirrors `run`'s error wrapping
         raise click.ClickException(f"Evaluation failed: {type(e).__name__}: {e}") from None
 

@@ -16,6 +16,7 @@ the same shape.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from abc import ABC, abstractmethod
@@ -34,7 +35,23 @@ class JudgeVerdict(BaseModel):
 
 
 class LLMJudge(ABC):
-    """Base class every LLM-judge provider implements."""
+    """Base class every LLM-judge provider implements.
+
+    max_retries/retry_base_delay control automatic retry-with-backoff
+    around complete() - the actual network call, which is where
+    transient failures (rate limits, connection blips, timeouts) show
+    up in practice. Retrying complete() specifically (rather than the
+    whole judge() call) means a resampled response also gets a fresh
+    chance at producing well-formed JSON, without retry logic needing
+    to know anything about JSON parsing.
+
+    Defaults are deliberately modest (2 retries, 1s base delay) so a
+    genuinely broken setup (bad API key, wrong model name) still fails
+    fast rather than silently hanging for a long backoff sequence.
+    """
+
+    max_retries: int = 2
+    retry_base_delay: float = 1.0
 
     @abstractmethod
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
@@ -45,13 +62,27 @@ class LLMJudge(ABC):
         raise NotImplementedError
 
     async def judge(self, system_prompt: str, user_prompt: str) -> JudgeVerdict:
-        """Get a completion and parse it into a JudgeVerdict. On a
-        malformed response (the model didn't return valid JSON), this
-        raises rather than silently returning a fabricated 0.0 - a
-        parsing failure is a real problem the user should see, not a
-        score that looks like a genuine low-quality verdict."""
-        raw = await self.complete(system_prompt, user_prompt)
+        """Get a completion (retrying transient failures automatically)
+        and parse it into a JudgeVerdict. On a malformed response after
+        all retries (the model didn't return valid JSON), this raises
+        rather than silently returning a fabricated 0.0 - a parsing
+        failure is a real problem the user should see, not a score
+        that looks like a genuine low-quality verdict."""
+        raw = await self._complete_with_retry(system_prompt, user_prompt)
         return _parse_verdict(raw)
+
+    async def _complete_with_retry(self, system_prompt: str, user_prompt: str) -> str:
+        last_exc: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                return await self.complete(system_prompt, user_prompt)
+            except Exception as exc:  # noqa: BLE001 - deliberately broad, see class docstring
+                last_exc = exc
+                if attempt < self.max_retries:
+                    delay = self.retry_base_delay * (2**attempt)
+                    await asyncio.sleep(delay)
+        assert last_exc is not None  # loop always sets this before falling through
+        raise last_exc
 
 
 # Judge/synthesis prompts ask for JSON but models often wrap it in

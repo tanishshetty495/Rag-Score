@@ -16,6 +16,8 @@ class AnthropicJudge(LLMJudge):
         model: str = "claude-haiku-4-5",
         api_key: str | None = None,
         max_tokens: int = 512,
+        max_retries: int = 2,
+        retry_base_delay: float = 1.0,
     ) -> None:
         try:
             from anthropic import AsyncAnthropic
@@ -29,6 +31,8 @@ class AnthropicJudge(LLMJudge):
         self._client = AsyncAnthropic(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         response = await self._client.messages.create(

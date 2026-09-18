@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from rag_score.agentic.adapters import AgentAdapter
@@ -40,6 +41,7 @@ async def _run_single(
     agent: AgentAdapter,
     config: TrajectoryRunConfig,
     semaphore: asyncio.Semaphore,
+    on_progress: Callable[[], None] | None,
 ) -> TrajectoryEvalResult:
     async with semaphore:
         result = TrajectoryEvalResult(run_id=config.run_id, test_case_id=test_case.test_case_id)
@@ -53,6 +55,9 @@ async def _run_single(
             result.error = f"{type(exc).__name__}: {exc}"
             if not config.continue_on_error:
                 raise
+        finally:
+            if on_progress is not None:
+                on_progress()
         return result
 
 
@@ -79,16 +84,22 @@ async def run_trajectory_evaluation(
     agent: AgentAdapter,
     metrics: list[TrajectoryMetric],
     config: TrajectoryRunConfig,
+    on_progress: Callable[[], None] | None = None,
 ) -> TrajectoryRunReport:
     """Run every TrajectoryTestCase through the agent once and score
     the resulting trajectory against every metric. Same two-pass
     structure as run_evaluation(): agent runs first (concurrency-bounded),
     then scoring, so a slow metric doesn't block the next test case's
-    agent run from starting."""
+    agent run from starting.
+
+    on_progress, if given, is called once (no arguments) each time a
+    test case's agent run completes - see run_evaluation()'s docstring
+    for the same parameter.
+    """
     semaphore = asyncio.Semaphore(config.max_concurrency)
 
     eval_results = await asyncio.gather(
-        *(_run_single(tc, agent, config, semaphore) for tc in test_cases)
+        *(_run_single(tc, agent, config, semaphore, on_progress) for tc in test_cases)
     )
 
     tc_by_id = {tc.test_case_id: tc for tc in test_cases}

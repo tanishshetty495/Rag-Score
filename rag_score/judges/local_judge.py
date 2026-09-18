@@ -30,6 +30,8 @@ class LocalJudge(LLMJudge):
         base_url: str = _DEFAULT_OLLAMA_BASE_URL,
         api_key: str = "not-needed",
         temperature: float = 0.0,
+        max_retries: int = 2,
+        retry_base_delay: float = 1.0,
     ) -> None:
         """
         model: the model name as your local server knows it, e.g.
@@ -39,6 +41,10 @@ class LocalJudge(LLMJudge):
                   LM Studio, etc.
         api_key: most local servers don't check this, but the OpenAI
                  SDK requires a non-empty string to construct a client.
+        max_retries/retry_base_delay: useful even locally - a server
+                 that's still loading a model on first request can
+                 return a transient error that clears up within a
+                 couple seconds.
         """
         try:
             from openai import AsyncOpenAI
@@ -52,6 +58,8 @@ class LocalJudge(LLMJudge):
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.model = model
         self.temperature = temperature
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         response = await self._client.chat.completions.create(

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from rag_score.adapters.base import GeneratorAdapter, RetrieverAdapter
@@ -45,6 +46,7 @@ async def _run_single(
     generator: GeneratorAdapter,
     config: RunConfig,
     semaphore: asyncio.Semaphore,
+    on_progress: Callable[[], None] | None,
 ) -> EvalResult:
     async with semaphore:
         result = EvalResult(run_id=config.run_id, test_case_id=test_case.test_case_id)
@@ -65,6 +67,14 @@ async def _run_single(
             result.error = f"{type(exc).__name__}: {exc}"
             if not config.continue_on_error:
                 raise
+        finally:
+            # Report progress once retrieval+generation is done for this
+            # test case, regardless of success/failure - a failed case
+            # still represents forward progress through the dataset, and
+            # scoring (the second pass) is comparatively fast so isn't
+            # tracked separately.
+            if on_progress is not None:
+                on_progress()
 
         return result
 
@@ -95,6 +105,7 @@ async def run_evaluation(
     generator: GeneratorAdapter,
     metrics: list[Metric],
     config: RunConfig,
+    on_progress: Callable[[], None] | None = None,
 ) -> RunReport:
     """Run every TestCase through the pipeline and score it against every metric.
 
@@ -103,12 +114,18 @@ async def run_evaluation(
       2. score every resulting EvalResult against every metric
     kept separate (rather than interleaved) so a slow LLM judge doesn't
     block the next test case's retrieval/generation from starting.
+
+    on_progress, if given, is called once (synchronously, with no
+    arguments) each time a test case finishes its retrieve+generate
+    phase - e.g. `click.progressbar`'s `.update(1)` bound method. Kept
+    as a plain callback rather than an async generator/queue so callers
+    that don't care about progress pay zero overhead.
     """
     semaphore = asyncio.Semaphore(config.max_concurrency)
 
     eval_results = await asyncio.gather(
         *(
-            _run_single(tc, retriever, generator, config, semaphore)
+            _run_single(tc, retriever, generator, config, semaphore, on_progress)
             for tc in test_cases
         )
     )
