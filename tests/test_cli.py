@@ -248,3 +248,38 @@ class TestRunTrajectoryCommand:
                 payload = json.load(f)
             assert "summary" in payload
             assert "results" in payload
+
+
+class TestProgressBar:
+    """Regression tests for the progress bar added to both `run` and
+    `run-trajectory` - confirms the on_progress wiring doesn't break
+    either command and that results are correct with it in place."""
+
+    def test_run_command_still_produces_correct_results_with_progress_bar(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            _write_demo_pipeline(runner)
+            with open("config.json", "w") as f:
+                json.dump({
+                    "dataset": "test_set.json",
+                    "retriever": "demo_pipeline:my_retriever",
+                    "generator": "demo_pipeline:my_generator",
+                    "metrics": ["precision_at_5"],
+                }, f)
+            result = runner.invoke(cli, ["run", "config.json"])
+            assert result.exit_code == 0
+            assert "precision_at_5" in result.output
+
+    def test_run_trajectory_command_still_produces_correct_results_with_progress_bar(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            _write_demo_agent()
+            with open("config.json", "w") as f:
+                json.dump({
+                    "dataset": "trajectory_test_set.json",
+                    "agent": "demo_agent:my_agent",
+                    "metrics": ["tool_selection_recall"],
+                }, f)
+            result = runner.invoke(cli, ["run-trajectory", "config.json"])
+            assert result.exit_code == 0
+            assert "tool_selection_recall" in result.output

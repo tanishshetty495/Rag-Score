@@ -107,6 +107,12 @@ The judge reads its API key from the provider's usual environment variable (`OPE
 
 Mix and match freely with the offline metrics in the same run — `["precision_at_5", "faithfulness"]` works fine.
 
+Every judge automatically retries transient failures (rate limits, connection blips) with exponential backoff — 2 retries, 1 second base delay by default. Override per judge:
+
+```json
+{ "...": "...", "judge": { "provider": "anthropic", "max_retries": 5, "retry_base_delay": 2.0 } }
+```
+
 ## Using it as a library (Jupyter/notebooks)
 
 ```python

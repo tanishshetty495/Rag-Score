@@ -105,3 +105,28 @@ class TestRunTrajectoryEvaluation:
         assert scores["tool_selection_recall"] == 1.0
         assert scores["tool_selection_precision"] == 1.0
         assert scores["tool_call_order_correctness"] == 0.0
+
+    async def test_on_progress_called_once_per_test_case(self):
+        test_cases = [
+            TrajectoryTestCase(question="q1", expected_tool_sequence=["search"]),
+            TrajectoryTestCase(question="q2", expected_tool_sequence=["search"]),
+        ]
+        agent = CallableAgentAdapter(_working_agent)
+        config = TrajectoryRunConfig(run_id="r1")
+        progress_calls = []
+        await run_trajectory_evaluation(
+            test_cases, agent, [ToolSelectionRecall()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == 2
+
+    async def test_on_progress_called_even_on_agent_failure(self):
+        test_cases = [TrajectoryTestCase(question="q1")]
+        agent = CallableAgentAdapter(_failing_agent)
+        config = TrajectoryRunConfig(run_id="r1", continue_on_error=True)
+        progress_calls = []
+        await run_trajectory_evaluation(
+            test_cases, agent, [ToolSelectionRecall()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == 1

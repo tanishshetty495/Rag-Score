@@ -92,3 +92,36 @@ class TestRunEvaluation:
             sample_test_cases, fake_retriever, fake_generator, [MRR()], config
         )
         assert all(s.judge_reasoning is None for s in report.scores)
+
+    async def test_on_progress_called_once_per_test_case(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        progress_calls = []
+        config = RunConfig(run_id="r1")
+        await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == len(sample_test_cases)
+
+    async def test_on_progress_called_even_on_failure(
+        self, sample_test_cases, failing_retriever, fake_generator
+    ):
+        # A failed test case still represents forward progress through
+        # the dataset - on_progress should fire regardless of success.
+        progress_calls = []
+        config = RunConfig(run_id="r1", continue_on_error=True)
+        await run_evaluation(
+            sample_test_cases, failing_retriever, fake_generator, [MRR()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == len(sample_test_cases)
+
+    async def test_none_on_progress_does_not_crash(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+        )
+        assert len(report.results) == len(sample_test_cases)
