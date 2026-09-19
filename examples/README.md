@@ -5,8 +5,8 @@ Four working, runnable end-to-end examples showing how to plug rag-score into di
 | File | Shows | Requires |
 |---|---|---|
 | `raw_example.py` | No framework at all - two plain async functions | Nothing extra |
-| `langchain_example.py` | A real LangChain `BaseRetriever` + LCEL chain | `pip install rag-score[langchain]` |
-| `llamaindex_example.py` | A real LlamaIndex `BaseRetriever` + bare LLM | `pip install rag-score[llamaindex]` |
+| `langchain_example.py` | A real LangChain `BaseRetriever` + LCEL chain | `pip install ragmark[langchain]` |
+| `llamaindex_example.py` | A real LlamaIndex `BaseRetriever` + bare LLM | `pip install ragmark[llamaindex]` |
 | `agentic_example.py` | Multi-step agent trajectory evaluation (tool-call sequence, not retrieve+generate) | Nothing extra |
 
 Each one is self-contained and uses a tiny in-memory "document store" (or, for the agentic example, simple rule-based tool routing) instead of a real vector DB or agent framework, so you can run it immediately with no setup:

@@ -16,8 +16,10 @@ Know if your RAG pipeline actually works — in 3 lines of code, with zero frame
 ## Install
 
 ```bash
-pip install rag-score
+pip install ragmark
 ```
+
+> The PyPI listing name is `ragmark` (the name `rag-score` was already too similar to several existing packages) — everything else, including `import rag_score` and the `rageval` CLI command, is unaffected.
 
 ## 60-second quickstart
 
@@ -212,7 +214,7 @@ judge = LocalJudge(model="llama3.1")  # defaults to http://localhost:11434/v1 (O
 `local_faithfulness` and `local_answer_relevance` go further than the Ollama judge above - no LLM, no inference server, just a small embedding model computing semantic similarity locally:
 
 ```bash
-pip install rag-score[local-ml]
+pip install ragmark[local-ml]
 ```
 
 ```json

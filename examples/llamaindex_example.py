@@ -13,7 +13,7 @@ using a full query engine instead of a bare LLM, pass
 `your_index.as_query_engine()` to LlamaIndexGeneratorAdapter instead -
 it auto-detects which mode to use.
 
-Requires: pip install rag-score[llamaindex]
+Requires: pip install ragmark[llamaindex]
 
 Run it:
     python examples/llamaindex_example.py

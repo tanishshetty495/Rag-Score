@@ -10,7 +10,7 @@ In a real project, swap _DemoRetriever for your actual vectorstore
 retriever (e.g. `vectorstore.as_retriever()`) and the RunnableLambda
 for your actual chain (e.g. a full LCEL RAG chain or a ChatOpenAI call).
 
-Requires: pip install rag-score[langchain]
+Requires: pip install ragmark[langchain]
 
 Run it:
     python examples/langchain_example.py

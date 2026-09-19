@@ -5,7 +5,7 @@ Already using LangChain or LlamaIndex? Wrap your existing retriever/chain instea
 ## LangChain
 
 ```bash
-pip install rag-score[langchain]
+pip install ragmark[langchain]
 ```
 
 ```python
@@ -26,7 +26,7 @@ See `examples/langchain_example.py` for a full runnable version.
 ## LlamaIndex
 
 ```bash
-pip install rag-score[llamaindex]
+pip install ragmark[llamaindex]
 ```
 
 ```python

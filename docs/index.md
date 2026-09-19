@@ -15,7 +15,7 @@ Know if your RAG pipeline actually works — in 3 lines of code, with zero frame
 ## Install
 
 ```bash
-pip install rag-score
+pip install ragmark
 ```
 
 ## 60-second example
