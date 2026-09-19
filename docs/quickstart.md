@@ -5,7 +5,7 @@ This walks through the CLI-based workflow, the fastest way to get a first result
 ## 1. Install
 
 ```bash
-pip install rag-score
+pip install ragmark
 ```
 
 ## 2. Describe your pipeline as two functions

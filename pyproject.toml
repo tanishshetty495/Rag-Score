@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rag-score"
+name = "ragmark"
 version = "0.5.0"
 description = "Framework-agnostic RAG evaluation: zero lock-in, zero forced API cost."
 readme = "README.md"

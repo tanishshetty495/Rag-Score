@@ -16,7 +16,7 @@ jobs:
       id-token: write
     environment:
       name: pypi
-      url: https://pypi.org/p/rag-score
+      url: https://pypi.org/p/ragmark
 
     steps:
       - uses: actions/checkout@v4

@@ -39,7 +39,7 @@ These two metrics are deliberately independent, and reading them together tells 
 ## Local ML metrics (no LLM, no API, no server)
 
 ```bash
-pip install rag-score[local-ml]
+pip install ragmark[local-ml]
 ```
 
 | Metric name | Class | What it measures |
