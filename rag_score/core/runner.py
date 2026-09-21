@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from rag_score.core.runner import RunConfig, run_evaluation
 from rag_score.metrics.retrieval.mrr import MRR
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 from rag_score.telemetry import TelemetryConfig
