@@ -1,142 +1,187 @@
-"""
-The evaluation runner.
-
-Fans out across a whole dataset concurrently (bounded by a semaphore so
-a rate-limited API or a local machine doesn't get hammered), runs the
-user's retriever + generator adapters per TestCase, then scores each
-resulting EvalResult against every requested Metric.
-
-This is what turns "a few hundred test cases x an LLM judge" from a
-multi-hour sequential slog into something that finishes in minutes.
-"""
+"""Tests for core/runner.py - the async evaluation orchestrator."""
 
 from __future__ import annotations
 
-import asyncio
-import time
-from collections.abc import Callable
-from dataclasses import dataclass, field
-
-from rag_score.adapters.base import GeneratorAdapter, RetrieverAdapter
-from rag_score.core.types import EvalResult, MetricScore, RetrievedChunk, TestCase
-from rag_score.metrics.base import Metric
+from rag_score.core.runner import RunConfig, run_evaluation
+from rag_score.metrics.retrieval.mrr import MRR
+from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
+from rag_score.telemetry import TelemetryConfig
 
 
-@dataclass
-class RunConfig:
-    run_id: str
-    project_name: str = "default"
-    top_k: int = 5
-    max_concurrency: int = 8
-    # If a single test case's retrieve/generate call raises, log it into
-    # EvalResult.error and keep going rather than aborting the whole run.
-    continue_on_error: bool = True
-
-
-@dataclass
-class RunReport:
-    run_id: str
-    results: list[EvalResult] = field(default_factory=list)
-    scores: list[MetricScore] = field(default_factory=list)
-
-
-async def _run_single(
-    test_case: TestCase,
-    retriever: RetrieverAdapter,
-    generator: GeneratorAdapter,
-    config: RunConfig,
-    semaphore: asyncio.Semaphore,
-    on_progress: Callable[[], None] | None,
-) -> EvalResult:
-    async with semaphore:
-        result = EvalResult(run_id=config.run_id, test_case_id=test_case.test_case_id)
-        try:
-            t0 = time.perf_counter()
-            context: list[RetrievedChunk] = await retriever.retrieve(
-                test_case.question, top_k=config.top_k
-            )
-            result.retrieval_latency_ms = (time.perf_counter() - t0) * 1000
-            result.retrieved_context = context
-
-            t1 = time.perf_counter()
-            answer = await generator.generate(test_case.question, context)
-            result.generation_latency_ms = (time.perf_counter() - t1) * 1000
-            result.generated_answer = answer
-
-        except Exception as exc:
-            result.error = f"{type(exc).__name__}: {exc}"
-            if not config.continue_on_error:
-                raise
-        finally:
-            # Report progress once retrieval+generation is done for this
-            # test case, regardless of success/failure - a failed case
-            # still represents forward progress through the dataset, and
-            # scoring (the second pass) is comparatively fast so isn't
-            # tracked separately.
-            if on_progress is not None:
-                on_progress()
-
-        return result
-
-
-async def _score_result(
-    test_case: TestCase, result: EvalResult, metrics: list[Metric]
-) -> list[MetricScore]:
-    if result.error is not None:
-        # Don't score failed runs - a 0.0 would silently pollute averages
-        # and look like a genuinely bad answer rather than a crash.
-        return []
-
-    scored = await asyncio.gather(*(m.score_with_reasoning(test_case, result) for m in metrics))
-    return [
-        MetricScore(
-            evaluation_id=result.evaluation_id,
-            metric_name=m.name,
-            score_value=score,
-            judge_reasoning=reasoning,
+class TestRunEvaluation:
+    async def test_produces_one_result_per_test_case(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", max_concurrency=4)
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
         )
-        for m, (score, reasoning) in zip(metrics, scored)
-    ]
+        assert len(report.results) == len(sample_test_cases)
 
-
-async def run_evaluation(
-    test_cases: list[TestCase],
-    retriever: RetrieverAdapter,
-    generator: GeneratorAdapter,
-    metrics: list[Metric],
-    config: RunConfig,
-    on_progress: Callable[[], None] | None = None,
-) -> RunReport:
-    """Run every TestCase through the pipeline and score it against every metric.
-
-    Two concurrency-bounded fan-out passes:
-      1. retrieve + generate for every test case
-      2. score every resulting EvalResult against every metric
-    kept separate (rather than interleaved) so a slow LLM judge doesn't
-    block the next test case's retrieval/generation from starting.
-
-    on_progress, if given, is called once (synchronously, with no
-    arguments) each time a test case finishes its retrieve+generate
-    phase - e.g. `click.progressbar`'s `.update(1)` bound method. Kept
-    as a plain callback rather than an async generator/queue so callers
-    that don't care about progress pay zero overhead.
-    """
-    semaphore = asyncio.Semaphore(config.max_concurrency)
-
-    eval_results = await asyncio.gather(
-        *(
-            _run_single(tc, retriever, generator, config, semaphore, on_progress)
-            for tc in test_cases
+    async def test_produces_scores_for_every_metric_and_result(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        metrics = [PrecisionAtK(k=3), MRR()]
+        config = RunConfig(run_id="r1", max_concurrency=4)
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, metrics, config
         )
-    )
+        # 2 test cases x 2 metrics = 4 scores, since both succeed
+        assert len(report.scores) == len(sample_test_cases) * len(metrics)
 
-    tc_by_id = {tc.test_case_id: tc for tc in test_cases}
-    scored_lists = await asyncio.gather(
-        *(
-            _score_result(tc_by_id[r.test_case_id], r, metrics)
-            for r in eval_results
+    async def test_failed_retrieval_is_captured_not_raised(
+        self, sample_test_cases, failing_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", max_concurrency=4, continue_on_error=True)
+        report = await run_evaluation(
+            sample_test_cases, failing_retriever, fake_generator, [MRR()], config
         )
-    )
-    all_scores = [s for sublist in scored_lists for s in sublist]
+        assert len(report.results) == len(sample_test_cases)
+        assert all(r.error is not None for r in report.results)
 
-    return RunReport(run_id=config.run_id, results=list(eval_results), scores=all_scores)
+    async def test_failed_results_are_not_scored(
+        self, sample_test_cases, failing_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", max_concurrency=4, continue_on_error=True)
+        report = await run_evaluation(
+            sample_test_cases, failing_retriever, fake_generator, [MRR()], config
+        )
+        # Errors should be skipped, not scored as 0.0
+        assert len(report.scores) == 0
+
+    async def test_run_id_propagates_to_all_results(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="my-specific-run-id", max_concurrency=4)
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.run_id == "my-specific-run-id" for r in report.results)
+
+    async def test_empty_dataset_produces_empty_report(self, fake_retriever, fake_generator):
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation([], fake_retriever, fake_generator, [MRR()], config)
+        assert report.results == []
+        assert report.scores == []
+
+    async def test_latency_is_recorded(self, sample_test_cases, fake_retriever, fake_generator):
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.retrieval_latency_ms is not None for r in report.results)
+        assert all(r.generation_latency_ms is not None for r in report.results)
+
+    async def test_llm_judge_reasoning_flows_into_metric_score(
+        self, sample_test_cases, fake_retriever, fake_generator, fake_judge
+    ):
+        from rag_score.metrics.generation.faithfulness import Faithfulness
+
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator,
+            [Faithfulness(judge=fake_judge)], config,
+        )
+        assert len(report.scores) == len(sample_test_cases)
+        assert all(s.judge_reasoning == "Looks reasonable." for s in report.scores)
+
+    async def test_pure_math_metric_has_no_reasoning(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(s.judge_reasoning is None for s in report.scores)
+
+    async def test_on_progress_called_once_per_test_case(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        progress_calls = []
+        config = RunConfig(run_id="r1")
+        await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == len(sample_test_cases)
+
+    async def test_on_progress_called_even_on_failure(
+        self, sample_test_cases, failing_retriever, fake_generator
+    ):
+        # A failed test case still represents forward progress through
+        # the dataset - on_progress should fire regardless of success.
+        progress_calls = []
+        config = RunConfig(run_id="r1", continue_on_error=True)
+        await run_evaluation(
+            sample_test_cases, failing_retriever, fake_generator, [MRR()], config,
+            on_progress=lambda: progress_calls.append(1),
+        )
+        assert len(progress_calls) == len(sample_test_cases)
+
+    async def test_none_on_progress_does_not_crash(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1")
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+        )
+        assert len(report.results) == len(sample_test_cases)
+
+    async def test_telemetry_off_by_default_leaves_fields_none(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        """The critical backward-compatibility check for this feature:
+        not opting in must produce byte-for-byte the same behavior as
+        before telemetry existed."""
+        config = RunConfig(run_id="r1")  # no telemetry= passed
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.total_tokens is None for r in report.results)
+        assert all(r.estimated_cost_usd is None for r in report.results)
+
+    async def test_telemetry_on_populates_tokens_and_cost(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", telemetry=TelemetryConfig(model_name="gpt-4o-mini"))
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.total_tokens is not None for r in report.results)
+        assert all(r.total_tokens > 0 for r in report.results)
+        assert all(r.estimated_cost_usd is not None for r in report.results)
+        assert all(r.estimated_cost_usd > 0 for r in report.results)
+
+    async def test_telemetry_on_unpriced_model_counts_tokens_but_not_cost(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", telemetry=TelemetryConfig(model_name="unpriced-model"))
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.total_tokens is not None for r in report.results)
+        assert all(r.estimated_cost_usd is None for r in report.results)
+
+    async def test_telemetry_does_not_affect_latency_tracking(
+        self, sample_test_cases, fake_retriever, fake_generator
+    ):
+        config = RunConfig(run_id="r1", telemetry=TelemetryConfig())
+        report = await run_evaluation(
+            sample_test_cases, fake_retriever, fake_generator, [MRR()], config
+        )
+        assert all(r.retrieval_latency_ms is not None for r in report.results)
+        assert all(r.generation_latency_ms is not None for r in report.results)
+
+    async def test_failed_result_has_no_telemetry(
+        self, sample_test_cases, failing_retriever, fake_generator
+    ):
+        config = RunConfig(
+            run_id="r1", telemetry=TelemetryConfig(), continue_on_error=True
+        )
+        report = await run_evaluation(
+            sample_test_cases, failing_retriever, fake_generator, [MRR()], config
+        )
+        # Retrieval failed before generation ran, so there's no answer
+        # text to count tokens for - telemetry fields correctly stay
+        # unset rather than reporting a nonsensical partial count.
+        assert all(r.total_tokens is None for r in report.results)

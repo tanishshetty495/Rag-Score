@@ -59,6 +59,7 @@ from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 from rag_score.metrics.retrieval.recall_at_k import RecallAtK
 from rag_score.report.html_report import generate_html_report
 from rag_score.synthesize import load_documents_from_dir, synthesize_test_set
+from rag_score.telemetry import TelemetryConfig
 
 # ---------------------------------------------------------------------------
 # Config loading
@@ -314,11 +315,27 @@ def run(config_path: str) -> None:
     encoder_model = config.get("encoder_model")
     metrics = [_build_metric(name, judge, encoder_model) for name in config["metrics"]]
 
+    telemetry_config = None
+    if "telemetry" in config:
+        telemetry_settings = config["telemetry"]
+        kwargs: dict[str, Any] = {}
+        if "model" in telemetry_settings:
+            kwargs["model_name"] = telemetry_settings["model"]
+        if "pricing" in telemetry_settings:
+            # JSON can't express tuples, so a config's pricing table
+            # comes in as {"model": [prompt_price, completion_price]} -
+            # convert to the tuple shape TelemetryConfig expects.
+            kwargs["pricing"] = {
+                model: tuple(prices) for model, prices in telemetry_settings["pricing"].items()
+            }
+        telemetry_config = TelemetryConfig(**kwargs)
+
     run_config = RunConfig(
         run_id=f"run-{Path(config_path).stem}",
         project_name=config.get("project_name", "default"),
         top_k=config.get("top_k", 5),
         max_concurrency=config.get("max_concurrency", 8),
+        telemetry=telemetry_config,
     )
 
     click.echo(f"Running {len(test_cases)} test cases with {len(metrics)} metrics...")

@@ -256,6 +256,28 @@ rageval run-trajectory eval_config.json
 
 All three are offline (zero API keys) and mirror the naming/semantics of the single-shot retrieval metrics deliberately - same questions, applied to a sequence of tool names instead of a set of retrieved doc IDs. See `examples/agentic_example.py` for a full runnable version.
 
+## Telemetry (token counts + cost estimation)
+
+Off by default; enable it to track token usage and estimated cost alongside your scores:
+
+```bash
+pip install ragmark[telemetry]
+```
+
+```json
+{ "...": "...", "telemetry": { "model": "gpt-4o-mini" } }
+```
+
+Token counts are estimated from the actual prompt/completion text via `tiktoken`, with a dependency-free fallback when `tiktoken` isn't installed or can't reach its encoding server — telemetry stays usable in offline/firewalled environments, consistent with this project's local-first metrics. Populates `total_tokens`/`estimated_cost_usd` on every result, adds `retrieval_latency_sec`/`generation_latency_sec` columns to the SQLite and Pandas exports, and shows cost/token summary cards in the HTML report.
+
+Override the built-in pricing table for your own model or rates:
+
+```json
+{ "...": "...", "telemetry": { "model": "my-model", "pricing": { "my-model": [0.001, 0.002] } } }
+```
+
+(Pricing values are `[prompt_price_per_1k_tokens, completion_price_per_1k_tokens]` in USD.) An unpriced model still counts tokens — cost just reports as unknown rather than a misleading `$0.00`.
+
 ## Roadmap
 
 Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ragmark"
-version = "0.5.0"
+version = "0.6.0"
 description = "Framework-agnostic RAG evaluation: zero lock-in, zero forced API cost."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,16 +36,18 @@ bi = ["pandas>=2.0"]
 langchain = ["langchain-core>=0.3.0"]
 llamaindex = ["llama-index-core>=0.11.0"]
 local-ml = ["sentence-transformers>=3.0"]
+telemetry = ["tiktoken>=0.7.0"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 all = [
   "pyyaml>=6.0", "openai>=1.0", "anthropic>=0.30", "jinja2>=3.0",
   "pandas>=2.0", "langchain-core>=0.3.0", "llama-index-core>=0.11.0",
-  "sentence-transformers>=3.0",
+  "sentence-transformers>=3.0", "tiktoken>=0.7.0",
 ]
 dev = [
   "pytest>=8.0", "pytest-asyncio>=0.24", "ruff>=0.6", "jinja2>=3.0",
   "pyyaml>=6.0", "pandas>=2.0", "openai>=1.0", "anthropic>=0.30",
   "langchain-core>=0.3.0", "llama-index-core>=0.11.0", "sentence-transformers>=3.0",
+  "tiktoken>=0.7.0",
 ]
 
 [project.urls]
