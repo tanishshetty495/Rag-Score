@@ -1,119 +1,106 @@
-"""Tests for telemetry.py - token counting and cost estimation.
+"""
+Telemetry: token counting and cost estimation for evaluation runs.
 
-The fallback token-count path (word-based estimate) is tested for
-real here, since this sandbox genuinely can't reach tiktoken's
-encoding CDN - that's not a mock, it's the actual code path most
-offline/firewalled users will also hit. The tiktoken-success path is
-tested via mocking since exercising the real thing needs network
-access this environment doesn't have.
+Token counts are estimated from the actual prompt/completion TEXT via
+tiktoken, not pulled from provider-reported usage - that's a
+deliberate choice, not a shortcut. Making this accurate would mean
+changing GeneratorAdapter.generate() to return a richer object
+(answer + usage metadata) instead of a plain string, which would
+break every existing adapter (Callable/LangChain/LlamaIndex) and every
+example/test written against the current interface. Text-based
+estimation costs nothing in compatibility and is accurate enough for
+tracking relative cost/usage trends across a run.
+
+tiktoken itself downloads its BPE encoding file from a CDN
+(openaipublic.blob.core.windows.net) on first use per model - a
+genuine problem for exactly the kind of offline/corporate-firewall
+environments this package's local-first philosophy targets (see
+judges/local_judge.py, judges/local_ml.py). count_tokens() therefore
+falls back to a dependency-free word-based estimate whenever tiktoken
+can't be used, rather than letting telemetry collection break an
+otherwise-successful evaluation run.
 """
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock, patch
+from dataclasses import dataclass, field
 
-import pytest
+# Prices are USD per 1,000 tokens: (prompt_price, completion_price).
+# Deliberately small and easy to override - this is a starting point,
+# not an attempt to track every provider's pricing in perpetuity.
+DEFAULT_PRICING: dict[str, tuple[float, float]] = {
+    "gpt-4o-mini": (0.00015, 0.0006),
+    "gpt-4o": (0.0025, 0.01),
+    "claude-haiku-4-5": (0.001, 0.005),
+    "claude-opus-5": (0.015, 0.075),
+    "claude-sonnet-5": (0.003, 0.015),
+}
 
-from rag_score.telemetry import (
-    DEFAULT_PRICING,
-    TelemetryConfig,
-    count_tokens,
-    estimate_cost,
-)
+# tiktoken model names occasionally differ from a provider's public
+# model name (e.g. Anthropic models aren't in tiktoken's registry at
+# all) - map to the closest tiktoken-known encoding so estimation
+# still works, rather than failing for every non-OpenAI model.
+_TIKTOKEN_MODEL_FALLBACK = "gpt-4o-mini"
+
+# Rough words-to-tokens ratio used only when tiktoken is unavailable
+# or its encoding file can't be downloaded. English text averages
+# ~0.75 words per token (tokens are sub-word), so tokens ~= words / 0.75.
+_FALLBACK_WORDS_TO_TOKENS_RATIO = 1 / 0.75
 
 
-class TestCountTokens:
-    def test_empty_text_returns_zero(self):
-        assert count_tokens("", "gpt-4o-mini") == 0
+@dataclass
+class TelemetryConfig:
+    """Enables token/cost tracking on a run. Passing this to RunConfig
+    turns telemetry on; omitting it (the default) keeps evaluation
+    runs exactly as they were before this feature existed - zero
+    overhead, zero behavior change, for anyone who doesn't opt in."""
 
-    def test_fallback_path_returns_positive_count(self):
-        # Genuinely exercises the fallback (no network to tiktoken's
-        # CDN in this environment) rather than mocking it.
-        tokens = count_tokens("This is a test sentence with several words.", "gpt-4o-mini")
-        assert tokens > 0
+    model_name: str = "gpt-4o-mini"
+    pricing: dict[str, tuple[float, float]] = field(default_factory=lambda: dict(DEFAULT_PRICING))
 
-    def test_fallback_scales_with_text_length(self):
-        short = count_tokens("hello", "gpt-4o-mini")
-        long = count_tokens("hello " * 100, "gpt-4o-mini")
-        assert long > short
 
-    def test_mocked_tiktoken_success_path(self):
-        fake_encoding = MagicMock()
-        fake_encoding.encode.return_value = [1, 2, 3, 4, 5]
-        with patch("tiktoken.encoding_for_model", return_value=fake_encoding):
-            assert count_tokens("some text", "gpt-4o-mini") == 5
+def count_tokens(text: str, model_name: str) -> int:
+    """Estimate the number of tokens in `text` for `model_name`.
 
-    def test_unknown_model_falls_back_to_known_encoding(self):
-        """Anthropic models aren't in tiktoken's registry at all -
-        confirm the KeyError path falls back rather than raising."""
-        fake_encoding = MagicMock()
-        fake_encoding.encode.return_value = [1, 2, 3]
+    Tries tiktoken first; falls back to a word-count-based estimate if
+    tiktoken isn't installed, doesn't recognize the model, or can't
+    reach its encoding CDN (common in offline/firewalled environments -
+    this is the expected, non-error path there, not a bug).
+    """
+    if not text:
+        return 0
 
-        def fake_lookup(model):
-            if model == "claude-haiku-4-5":
-                raise KeyError("not found")
-            return fake_encoding
+    try:
+        import tiktoken
 
-        with patch("tiktoken.encoding_for_model", side_effect=fake_lookup):
-            assert count_tokens("text", "claude-haiku-4-5") == 3
-
-    def test_missing_tiktoken_package_falls_back(self):
-        real_module = sys.modules.pop("tiktoken", None)
-        sys.modules["tiktoken"] = None
         try:
-            tokens = count_tokens("some reasonably long test sentence here", "gpt-4o-mini")
-            assert tokens > 0
-        finally:
-            del sys.modules["tiktoken"]
-            if real_module is not None:
-                sys.modules["tiktoken"] = real_module
+            encoding = tiktoken.encoding_for_model(model_name)
+        except KeyError:
+            # Model not in tiktoken's registry (e.g. any Anthropic
+            # model) - use a known-good encoding as a stand-in. Token
+            # counts across model families are close enough for cost
+            # *estimation* purposes even though they're not identical.
+            encoding = tiktoken.encoding_for_model(_TIKTOKEN_MODEL_FALLBACK)
+        return len(encoding.encode(text))
+    except Exception:  # noqa: BLE001 - any tiktoken failure (missing package,
+        # network-blocked CDN download, etc.) falls back rather than
+        # breaking telemetry collection for an otherwise-successful run.
+        return max(1, round(len(text.split()) * _FALLBACK_WORDS_TO_TOKENS_RATIO))
 
 
-class TestEstimateCost:
-    def test_known_model_returns_correct_cost(self):
-        cost = estimate_cost(1000, 500, "gpt-4o-mini")
-        expected = (1000 / 1000) * 0.00015 + (500 / 1000) * 0.0006
-        assert cost == pytest.approx(expected)
+def estimate_cost(
+    prompt_tokens: int,
+    completion_tokens: int,
+    model_name: str,
+    pricing: dict[str, tuple[float, float]] | None = None,
+) -> float | None:
+    """Estimate cost in USD. Returns None (not 0.0) when the model
+    isn't in the pricing table - silently reporting $0.00 for an
+    unpriced model would look like a real "this is free" answer rather
+    than "we don't know", which is a meaningfully different claim."""
+    table = pricing if pricing is not None else DEFAULT_PRICING
+    if model_name not in table:
+        return None
 
-    def test_unknown_model_returns_none_not_zero(self):
-        """A missing price must not silently look like a real $0.00 -
-        that's a meaningfully different claim from 'we don't know'."""
-        assert estimate_cost(1000, 500, "totally-unpriced-model") is None
-
-    def test_zero_tokens_returns_zero_cost(self):
-        assert estimate_cost(0, 0, "gpt-4o-mini") == 0.0
-
-    def test_custom_pricing_table_overrides_default(self):
-        custom = {"my-model": (0.01, 0.02)}
-        cost = estimate_cost(1000, 1000, "my-model", pricing=custom)
-        assert cost == pytest.approx(0.03)
-
-    def test_custom_pricing_table_does_not_fall_back_to_default(self):
-        # A model priced in DEFAULT_PRICING but not in a custom table
-        # passed explicitly should still return None, not silently
-        # use the default table behind the caller's back.
-        custom = {"only-this-model": (0.01, 0.02)}
-        assert estimate_cost(1000, 500, "gpt-4o-mini", pricing=custom) is None
-
-
-class TestTelemetryConfig:
-    def test_defaults(self):
-        config = TelemetryConfig()
-        assert config.model_name == "gpt-4o-mini"
-        assert config.pricing == DEFAULT_PRICING
-
-    def test_pricing_dicts_are_independent_across_instances(self):
-        """Regression test for the classic mutable-default-dataclass
-        bug - each TelemetryConfig() must get its own pricing dict,
-        not a shared reference to one module-level dict."""
-        config_a = TelemetryConfig()
-        config_b = TelemetryConfig()
-        config_a.pricing["new-model"] = (1.0, 2.0)
-        assert "new-model" not in config_b.pricing
-        assert "new-model" not in DEFAULT_PRICING
-
-    def test_custom_model_and_pricing(self):
-        config = TelemetryConfig(model_name="my-model", pricing={"my-model": (0.1, 0.2)})
-        assert config.model_name == "my-model"
-        assert config.pricing == {"my-model": (0.1, 0.2)}
+    prompt_price, completion_price = table[model_name]
+    return (prompt_tokens / 1000) * prompt_price + (completion_tokens / 1000) * completion_price
