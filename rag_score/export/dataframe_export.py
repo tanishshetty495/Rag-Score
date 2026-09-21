@@ -26,11 +26,24 @@ def _require_pandas():
 
 
 def results_to_dataframe(report: RunReport):
-    """One row per (test_case, evaluation) with raw I/O and latency -
-    the fact_evaluations table, as a DataFrame."""
+    """One row per (test_case, evaluation) with raw I/O, latency, and
+    telemetry (tokens/cost, when tracked) - the fact_evaluations table,
+    as a DataFrame."""
     pd = _require_pandas()
     rows = [r.model_dump(mode="json") for r in report.results]
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+    # Pandas' pivoted-from-JSON dtype gives us NaN (not an error) for
+    # rows where latency wasn't recorded - e.g. a test case that failed
+    # before generation ran - so this division is safe without an
+    # explicit null check, mirroring the SQLite export's generated
+    # _sec columns.
+    if "retrieval_latency_ms" in df.columns:
+        df["retrieval_latency_sec"] = df["retrieval_latency_ms"] / 1000.0
+    if "generation_latency_ms" in df.columns:
+        df["generation_latency_sec"] = df["generation_latency_ms"] / 1000.0
+
+    return df
 
 
 def scores_to_dataframe(report: RunReport):

@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.6.0]
+
+### Added
+- Telemetry: token counting and cost estimation, opt-in via `RunConfig(telemetry=TelemetryConfig(...))` or the CLI's `telemetry` config field. Populates `total_tokens`/`estimated_cost_usd`, fields that existed in the schema since v0.1.0 but were never wired up.
+  - Token counts estimated from actual prompt/completion text via `tiktoken`, with a dependency-free word-based fallback when `tiktoken` isn't installed or can't reach its encoding CDN (offline/firewalled environments)
+  - Configurable pricing table (`DEFAULT_PRICING` covers a handful of common models); unpriced models report `None` cost, never a misleading `$0.00`
+  - New `retrieval_latency_sec`/`generation_latency_sec` columns in the SQLite export (as native generated columns, always in sync with the existing `_ms` values) and the Pandas export
+  - New token/cost summary cards and a per-row column in the HTML report, shown only when telemetry is enabled
+  - New optional extra: `ragmark[telemetry]`
+- Closed a pre-existing test coverage gap in `dataframe_export.py` (had zero tests since it was first written)
+
 ## [0.5.0]
 
 ### Added

@@ -23,6 +23,7 @@ Every field accepted by `eval_config.json` / `eval_config.yaml`, passed to `rage
 | `html_output` | string | none | Path to write a self-contained `report.html`. |
 | `environment` | string | `"local"` | Recorded in the SQLite export; useful for distinguishing local runs from CI runs. |
 | `encoder_model` | string | `"all-MiniLM-L6-v2"` | Sentence-transformers model name used by `local_faithfulness`/`local_answer_relevance` (requires `pip install ragmark[local-ml]`). Ignored if those metrics aren't requested. |
+| `telemetry` | object | off | Enables token/cost tracking. `{"model": "gpt-4o-mini"}` at minimum; add `"pricing": {"model-name": [prompt_price_per_1k, completion_price_per_1k]}` to override the built-in pricing table. Requires `pip install ragmark[telemetry]` for accurate counts (falls back to a rough estimate otherwise). |
 
 ## `judge`
 

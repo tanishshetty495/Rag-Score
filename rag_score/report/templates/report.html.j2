@@ -68,6 +68,16 @@
       <div class="value {{ score_class(value) }}">{{ "%.3f"|format(value) }}</div>
     </div>
     {% endfor %}
+    {% if telemetry_summary %}
+    <div class="card">
+      <div class="label">Total tokens</div>
+      <div class="value">{{ telemetry_summary.total_tokens }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Est. cost</div>
+      <div class="value">{{ telemetry_summary.total_cost }}</div>
+    </div>
+    {% endif %}
   </div>
 
   {% if chart_svg %}
@@ -85,6 +95,7 @@
         <th>Answer</th>
         <th>Scores</th>
         <th>Latency</th>
+        {% if telemetry_summary %}<th>Tokens / Cost</th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -107,6 +118,7 @@
           {% endfor %}
         </td>
         <td>{{ row.total_latency_ms }}</td>
+        {% if telemetry_summary %}<td>{{ row.telemetry or "—" }}</td>{% endif %}
       </tr>
       {% endfor %}
     </tbody>

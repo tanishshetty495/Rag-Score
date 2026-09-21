@@ -31,6 +31,10 @@ class RunConfig:
     # If a single test case's retrieve/generate call raises, log it into
     # EvalResult.error and keep going rather than aborting the whole run.
     continue_on_error: bool = True
+    # Optional telemetry: token counting and cost estimation. None (the
+    # default) means telemetry is off - zero overhead, zero behavior
+    # change for anyone who doesn't opt in.
+    telemetry: object | None = None  # TelemetryConfig, kept as object to avoid circular import
 
 
 @dataclass
@@ -62,6 +66,22 @@ async def _run_single(
             answer = await generator.generate(test_case.question, context)
             result.generation_latency_ms = (time.perf_counter() - t1) * 1000
             result.generated_answer = answer
+
+            # Telemetry: count tokens and estimate cost if opted in.
+            if config.telemetry is not None:
+                from rag_score.telemetry import count_tokens, estimate_cost
+
+                prompt_text = test_case.question + " " + " ".join(
+                    c.text for c in context
+                )
+                model_name = config.telemetry.model_name
+                prompt_tokens = count_tokens(prompt_text, model_name)
+                completion_tokens = count_tokens(answer, model_name)
+                result.total_tokens = prompt_tokens + completion_tokens
+                result.estimated_cost_usd = estimate_cost(
+                    prompt_tokens, completion_tokens, model_name,
+                    pricing=config.telemetry.pricing,
+                )
 
         except Exception as exc:
             result.error = f"{type(exc).__name__}: {exc}"
