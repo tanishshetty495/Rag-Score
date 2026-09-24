@@ -15,6 +15,7 @@ from pathlib import Path
 from rag_score.core.runner import RunReport
 from rag_score.core.types import DimRun, TestCase
 
+
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
@@ -47,6 +48,14 @@ def _build_rows(
         if result.retrieval_latency_ms is not None and result.generation_latency_ms is not None:
             total_latency = f"{result.retrieval_latency_ms + result.generation_latency_ms:.0f}ms"
 
+        # Build telemetry string for display if telemetry data is present
+        telemetry_parts = []
+        if result.total_tokens is not None:
+            telemetry_parts.append(f"{result.total_tokens:,} tokens")
+        if result.estimated_cost_usd is not None:
+            telemetry_parts.append(f"${result.estimated_cost_usd:.4f}")
+        telemetry = " • ".join(telemetry_parts) if telemetry_parts else None
+
         rows.append(
             {
                 "question": tc.question if tc else "(unknown question)",
@@ -55,6 +64,7 @@ def _build_rows(
                 "error": result.error,
                 "scores": scores_by_eval.get(result.evaluation_id, {}),
                 "total_latency_ms": total_latency or "—",
+                "telemetry": telemetry,
             }
         )
     return rows
@@ -67,6 +77,29 @@ def _summarize(report: RunReport) -> dict[str, float]:
     for s in report.scores:
         by_metric.setdefault(s.metric_name, []).append(s.score_value)
     return {name: statistics.mean(values) for name, values in by_metric.items()}
+
+
+def _summarize_telemetry(report: RunReport) -> dict[str, float | int]:
+    """Summarize telemetry data across the report."""
+    total_tokens = 0
+    total_cost = 0.0
+    has_telemetry = False
+
+    for result in report.results:
+        if result.total_tokens is not None:
+            total_tokens += result.total_tokens
+            has_telemetry = True
+        if result.estimated_cost_usd is not None:
+            total_cost += result.estimated_cost_usd
+            has_telemetry = True
+
+    if not has_telemetry:
+        return {}
+
+    return {
+        "total_tokens": total_tokens,
+        "total_cost": total_cost,
+    }
 
 
 # Chart is generated as inline SVG (not Chart.js/a CDN script) so the
@@ -144,12 +177,14 @@ def generate_html_report(
 
     num_errors = sum(1 for r in report.results if r.error is not None)
     summary = _summarize(report)
+    telemetry_summary = _summarize_telemetry(report)
 
     html = template.render(
         run=run,
         num_results=len(report.results),
         num_errors=num_errors,
         summary=summary,
+        telemetry_summary=telemetry_summary,
         chart_svg=_build_score_chart_svg(summary),
         rows=_build_rows(report, test_cases),
     )
