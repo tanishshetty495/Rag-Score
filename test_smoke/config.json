@@ -1,0 +1,6 @@
+{
+  "dataset": "test_set.json",
+  "retriever": "fake_pipeline:my_retriever",
+  "generator": "fake_pipeline:my_generator",
+  "metrics": ["precision_at_5"]
+}
