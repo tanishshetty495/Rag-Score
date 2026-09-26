@@ -278,6 +278,31 @@ Override the built-in pricing table for your own model or rates:
 
 (Pricing values are `[prompt_price_per_1k_tokens, completion_price_per_1k_tokens]` in USD.) An unpriced model still counts tokens — cost just reports as unknown rather than a misleading `$0.00`.
 
+## Advanced Synthetic Test-Set Generation (v0.3)
+
+The `rageval synthesize` command now supports generating four different types of questions to comprehensively test RAG systems:
+
+- **standard** (default): Clear, direct questions answerable from the passage
+- **adversarial**: Questions with typos, vague/colloquial phrasing, or ambiguous pronouns - tests robustness to messy real-world input
+- **multi_hop**: Questions requiring information from two adjacent text chunks - tests multi-step reasoning
+- **unanswerable**: Questions that sound plausible but cannot be answered from the context - tests hallucination resistance
+
+Use the `--query-types` flag to specify one or more types (comma-separated):
+
+```bash
+rageval synthesize ./docs --judge '{"provider": "anthropic"}' --query-types standard,adversarial,unanswerable --output test_set.json
+```
+
+Each generated test case is tagged with its query type in the `metadata` field for later analysis:
+```json
+{
+  "question": "...",
+  "ground_truth_answer": "...",
+  "expected_doc_ids": ["doc_1::chunk_0"],
+  "metadata": {"query_type": "adversarial"}
+}
+```
+
 ## Roadmap
 
 Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).

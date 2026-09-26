@@ -15,7 +15,6 @@ from pathlib import Path
 from rag_score.core.runner import RunReport
 from rag_score.core.types import DimRun, TestCase
 
-
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 

@@ -159,3 +159,161 @@ class TestSynthesizeTestSet:
         assert tc.ground_truth_answer
         assert tc.expected_doc_ids
         assert tc.test_case_id  # auto-generated
+
+    async def test_backward_compatibility_query_types_none(self):
+        """query_types=None should produce identical behavior to before."""
+        documents = {"doc1": " ".join(f"word{i}" for i in range(50))}
+
+        # Test with query_types=None (the default)
+        judge_none = _FakeSynthesisJudge()
+        report_none = await synthesize_test_set(documents, judge_none, chunk_size=30, chunk_overlap=5)
+
+        # Test with explicit query_types=["standard"]
+        judge_standard = _FakeSynthesisJudge()
+        report_standard = await synthesize_test_set(
+            documents, judge_standard, chunk_size=30, chunk_overlap=5, query_types=["standard"]
+        )
+
+        # Should produce identical results
+        assert len(report_none.test_cases) == len(report_standard.test_cases)
+        assert len(report_none.errors) == len(report_standard.errors)
+        for tc_none, tc_standard in zip(report_none.test_cases, report_standard.test_cases):
+            assert tc_none.question == tc_standard.question
+            assert tc_none.ground_truth_answer == tc_standard.ground_truth_answer
+            assert tc_none.expected_doc_ids == tc_standard.expected_doc_ids
+            assert tc_none.metadata.get("query_type") == tc_standard.metadata.get("query_type") == "standard"
+
+    async def test_standard_query_type_explicit(self):
+        """Explicit 'standard' query type works."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": " ".join(f"word{i}" for i in range(50))}
+        report = await synthesize_test_set(
+            documents, judge, chunk_size=30, chunk_overlap=5, query_types=["standard"]
+        )
+
+        assert len(report.test_cases) >= 1
+        assert all(tc.metadata.get("query_type") == "standard" for tc in report.test_cases)
+        for tc in report.test_cases:
+            assert len(tc.expected_doc_ids) == 1
+            assert tc.expected_doc_ids[0].startswith("doc1::chunk_")
+
+    async def test_adversarial_query_type(self):
+        """Adversarial query type generates questions."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": "This is a test document with some content."}
+        report = await synthesize_test_set(
+            documents, judge, chunk_size=30, chunk_overlap=5, query_types=["adversarial"]
+        )
+
+        assert len(report.test_cases) >= 1
+        assert all(tc.metadata.get("query_type") == "adversarial" for tc in report.test_cases)
+        # Adversarial questions should still have expected_doc_ids pointing to the chunk
+        for tc in report.test_cases:
+            assert len(tc.expected_doc_ids) == 1
+            assert tc.expected_doc_ids[0].startswith("doc1::chunk_")
+
+    async def test_unanswerable_query_type(self):
+        """Unanswerable query type generates questions with empty expected_doc_ids."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": "This is a test document with some content."}
+        report = await synthesize_test_set(
+            documents, judge, chunk_size=30, chunk_overlap=5, query_types=["unanswerable"]
+        )
+
+        assert len(report.test_cases) >= 1
+        assert all(tc.metadata.get("query_type") == "unanswerable" for tc in report.test_cases)
+        # Unanswerable questions should have empty expected_doc_ids
+        for tc in report.test_cases:
+            assert tc.expected_doc_ids == []
+            assert tc.ground_truth_answer == "This question cannot be answered from the given context."
+
+    async def test_multi_hop_query_type(self):
+        """Multi-hop query type generates questions requiring two chunks."""
+        judge = _FakeSynthesisJudge()
+        # Create a document with enough content for multiple chunks
+        documents = {"doc1": " ".join(f"word{i}" for i in range(200))}  # ~200 words
+        report = await synthesize_test_set(
+            documents, judge, chunk_size=50, chunk_overlap=5, query_types=["multi_hop"]
+        )
+
+        # Should have generated multi-hop questions from adjacent chunk pairs
+        # Number of pairs = number of chunks - 1
+        chunks = chunk_text(" ".join(f"word{i}" for i in range(200)), chunk_size=50, overlap=5)
+        expected_pairs = max(0, len(chunks) - 1)
+
+        assert len(report.test_cases) >= expected_pairs
+        assert all(tc.metadata.get("query_type") == "multi_hop" for tc in report.test_cases)
+        # Multi-hop questions should have expected_doc_ids with two chunk IDs
+        for tc in report.test_cases:
+            assert len(tc.expected_doc_ids) == 2
+            # Both should be from doc1 and follow chunk naming pattern
+            for doc_id in tc.expected_doc_ids:
+                assert doc_id.startswith("doc1::chunk_")
+            # The two IDs should be different
+            assert tc.expected_doc_ids[0] != tc.expected_doc_ids[1]
+
+    async def test_invalid_query_type_raises_error(self):
+        """Invalid query type should raise ValueError with clear message."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": "test content"}
+
+        with pytest.raises(ValueError, match="Unknown query type"):
+            await synthesize_test_set(
+                documents, judge, query_types=["invalid_type"]
+            )
+
+        with pytest.raises(ValueError, match="Unknown query type"):
+            await synthesize_test_set(
+                documents, judge, query_types=["standard", "invalid_type"]
+            )
+
+        with pytest.raises(ValueError, match="Valid options are"):
+            await synthesize_test_set(
+                documents, judge, query_types=["invalid_type"]
+            )
+
+    async def test_multiple_query_types(self):
+        """Multiple query types should generate the right mix."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": " ".join(f"word{i}" for i in range(100))}
+
+        # Test with 2 questions_per_chunk and multiple query types
+        report = await synthesize_test_set(
+            documents,
+            judge,
+            chunk_size=30,
+            chunk_overlap=5,
+            questions_per_chunk=2,
+            query_types=["standard", "adversarial"]
+        )
+
+        # Should have 2 query types × 2 questions_per_chunk × number of chunks
+        chunks = chunk_text(" ".join(f"word{i}" for i in range(100)), chunk_size=30, overlap=5)
+        expected_count = len(chunks) * 2 * 2  # chunks × questions_per_chunk × query_types
+
+        assert len(report.test_cases) == expected_count
+
+        # Check distribution
+        standard_count = sum(1 for tc in report.test_cases if tc.metadata.get("query_type") == "standard")
+        adversarial_count = sum(1 for tc in report.test_cases if tc.metadata.get("query_type") == "adversarial")
+
+        assert standard_count == expected_count // 2
+        assert adversarial_count == expected_count // 2
+
+    async def test_query_types_metadata_tagging(self):
+        """Each test case should be tagged with its query type in metadata."""
+        judge = _FakeSynthesisJudge()
+        documents = {"doc1": "test content for testing"}
+
+        for query_type in ["standard", "adversarial", "unanswerable", "multi_hop"]:
+            # For multi_hop we need enough content for at least one pair
+            if query_type == "multi_hop":
+                documents = {"doc1": "word " * 100}  # Enough for multiple chunks
+
+            report = await synthesize_test_set(
+                documents, judge, chunk_size=30, chunk_overlap=5, query_types=[query_type]
+            )
+
+            assert len(report.test_cases) >= 1
+            for tc in report.test_cases:
+                assert tc.metadata.get("query_type") == query_type

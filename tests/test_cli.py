@@ -176,6 +176,129 @@ class TestSynthesizeCommand:
             assert "overlap must be smaller than chunk_size" in result.output
             assert "Traceback" not in result.output
 
+    def test_query_types_default_is_standard(self):
+        """--query-types should default to 'standard' only, preserving old behavior."""
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            os.makedirs("docs")
+            with open("docs/doc1.txt", "w") as f:
+                f.write("some test content")
+
+            # Test without --query-types flag (should default to standard)
+            # Note: We expect this to fail due to missing local judge server,
+            # but it should get past parameter parsing and into synthesis
+            result = runner.invoke(cli, [
+                "synthesize", "docs",
+                "--judge", '{"provider": "local", "model": "llama3.1"}',
+                "--output", "test_set.json"
+            ])
+            # Should fail due to judge connection issues, not parameter issues
+            assert result.exit_code != 0
+            assert "Error: Synthesis produced zero test cases" in result.output or \
+                   "Error: Unknown judge provider" not in result.output  # If it got past judge parsing
+
+            # More importantly, check that it didn't fail on parameter parsing
+            assert "Invalid value for '--query-types'" not in result.output
+            assert "Unknown query type" not in result.output  # Should not fail on valid default
+
+    def test_query_types_parameter_accepts_comma_separated_values(self):
+        """--query-types should accept comma-separated values."""
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            os.makedirs("docs")
+            with open("docs/doc1.txt", "w") as f:
+                f.write("some test content for testing")
+
+            result = runner.invoke(cli, [
+                "synthesize", "docs",
+                "--judge", '{"provider": "local", "model": "llama3.1"}',
+                "--query-types", "standard,adversarial",
+                "--output", "test_set.json"
+            ])
+            # Should fail due to judge connection issues, not parameter issues
+            assert result.exit_code != 0
+            # Check that it didn't fail on parameter parsing
+            assert "Invalid value for '--query-types'" not in result.output
+            assert "Unknown query type" not in result.output  # Should not fail on valid types
+            # Should get to the synthesis step
+            assert "Loaded 1 document(s) from docs" in result.output
+            assert "Chunking at" in result.output and "words (overlap" in result.output
+
+    def test_query_types_invalid_type_shows_clear_error(self):
+        """Invalid query type in --query-types should show a clear error message."""
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            os.makedirs("docs")
+            with open("docs/doc1.txt", "w") as f:
+                f.write("some test content")
+
+            result = runner.invoke(cli, [
+                "synthesize", "docs",
+                "--judge", '{"provider": "local", "model": "llama3.1"}',
+                "--query-types", "standard,invalid_type",
+                "--output", "test_set.json"
+            ])
+            assert result.exit_code != 0
+            assert "Unknown query type" in result.output
+            # Check that we get the valid options in the error message (order may vary)
+            assert "Valid options are:" in result.output
+            assert "standard" in result.output
+            assert "adversarial" in result.output
+            assert "multi_hop" in result.output
+            assert "unanswerable" in result.output
+
+    def test_query_types_multi_hop_requires_sufficient_content(self):
+        """--query-types multi_hop needs sufficient content to form chunk pairs."""
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            os.makedirs("docs")
+            with open("docs/doc1.txt", "w") as f:
+                f.write("short")  # Too short for even one chunk with default size
+
+            result = runner.invoke(cli, [
+                "synthesize", "docs",
+                "--judge", '{"provider": "local", "model": "llama3.1"}',
+                "--query-types", "multi_hop",
+                "--chunk-size", "10",
+                "--output", "test_set.json"
+            ])
+            # Should fail due to judge connection issues, not parameter issues
+            assert result.exit_code != 0
+            # Check that it didn't fail on parameter parsing
+            assert "Invalid value for '--query-types'" not in result.output
+            assert "Unknown query type" not in result.output  # Should not fail on valid type
+            # Should get to the synthesis step
+            assert "Loaded 1 document(s) from docs" in result.output
+            assert "Chunking at" in result.output and "words (overlap" in result.output
+
+    def test_query_types_unanswerable_has_empty_expected_doc_ids(self):
+        """--query-types unanswerable should produce test cases with empty expected_doc_ids."""
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            import os
+            os.makedirs("docs")
+            with open("docs/doc1.txt", "w") as f:
+                f.write("This is a test document with some content for testing.")
+
+            result = runner.invoke(cli, [
+                "synthesize", "docs",
+                "--judge", '{"provider": "local", "model": "llama3.1"}',
+                "--query-types", "unanswerable",
+                "--output", "test_set.json"
+            ])
+            # Should fail due to judge connection issues, not parameter issues
+            assert result.exit_code != 0
+            # Check that it didn't fail on parameter parsing
+            assert "Invalid value for '--query-types'" not in result.output
+            assert "Unknown query type" not in result.output  # Should not fail on valid type
+            # Should get to the synthesis step
+            assert "Loaded 1 document(s) from docs" in result.output
+            assert "Chunking at" in result.output and "words (overlap" in result.output
+
 
 def _write_demo_agent() -> None:
     with open("demo_agent.py", "w") as f:

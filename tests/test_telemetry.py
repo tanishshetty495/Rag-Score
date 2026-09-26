@@ -104,7 +104,7 @@ class TestDefaultPricing:
             assert completion >= 0
 
     def test_pricing_values_are_tuples(self):
-        for model, pricing in DEFAULT_PRICING.items():
+        for pricing in DEFAULT_PRICING.values():
             assert isinstance(pricing, tuple)
             assert len(pricing) == 2
             assert all(isinstance(x, float) for x in pricing)

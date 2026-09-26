@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [0.7.0]
+
+### Added
+- Advanced synthetic test-set generation: `rageval synthesize` now supports `--query-types` parameter to generate adversarial, multi-hop, and unanswerable questions in addition to standard questions
+  - Adversarial questions: include typos, vague/colloquial phrasing, or ambiguous pronouns to test robustness to messy real-world input
+  - Multi-hop questions: require information from two adjacent text chunks to test multi-step reasoning capabilities
+  - Unanswerable questions: sound plausible but cannot be answered from the context to test hallucination resistance
+  - Each generated test case is tagged with its query type in the `metadata` field for later analysis
+- Backward compatibility: when `--query-types` is not specified, defaults to "standard" only, preserving existing behavior
+
 ## [0.6.0]
 
 ### Added
