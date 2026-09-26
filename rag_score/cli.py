@@ -410,6 +410,7 @@ def run(config_path: str) -> None:
 @click.option("--chunk-overlap", default=50, show_default=True, help="Overlapping words between consecutive chunks.")
 @click.option("--questions-per-chunk", default=1, show_default=True, help="How many questions to generate per chunk.")
 @click.option("--max-concurrency", default=5, show_default=True, help="Concurrent judge calls.")
+@click.option("--query-types", default="standard", show_default=True, help="Comma-separated list of query types to generate: standard, adversarial, multi_hop, unanswerable")
 def synthesize(
     docs_dir: str,
     output: str,
@@ -418,11 +419,13 @@ def synthesize(
     chunk_overlap: int,
     questions_per_chunk: int,
     max_concurrency: int,
+    query_types: str,
 ) -> None:
     """Generate a synthetic test_set.json from a directory of .txt/.md documents.
 
     Example:
         rageval synthesize ./docs --judge '{"provider": "anthropic"}' --output test_set.json
+        rageval synthesize ./docs --judge '{"provider": "anthropic"}' --query-types standard,adversarial,unanswerable --output test_set.json
     """
     try:
         judge_config = json.loads(judge_json)
@@ -441,14 +444,21 @@ def synthesize(
     click.echo(f"Chunking at {chunk_size} words (overlap {chunk_overlap}) and generating questions...")
 
     try:
+        # Parse comma-separated query types
+        query_types_list = [qt.strip() for qt in query_types.split(",") if qt.strip()]
+        if not query_types_list:
+            query_types_list = ["standard"]  # fallback to default
+
         report = asyncio.run(
             synthesize_test_set(
                 documents,
                 judge,
+                dataset_name="synthesized",  # explicit for clarity
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
                 questions_per_chunk=questions_per_chunk,
                 max_concurrency=max_concurrency,
+                query_types=query_types_list,
             )
         )
     except ValueError as e:
