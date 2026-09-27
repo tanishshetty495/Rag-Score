@@ -23,10 +23,10 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Customize the following line to point to your config file and dataset.
-          # Ensure the config file has an 'output' field set to the desired results file (e.g., output: ./pr-results.json)
-          rageval run ./path/to/config.yaml
-          echo "results-path=./pr-results.json" >> $GITHUB_OUTPUT
+          # Use the temporary config file at ./eval_config.yaml
+          # Replace this with your own config file path and adjust the output field in the config.
+          rageval run ./eval_config.yaml
+          echo "results-path=./eval_results.json" >> $GITHUB_OUTPUT
   evaluate-main:
     runs-on: ubuntu-latest
     outputs:
@@ -45,10 +45,10 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Customize the following line to point to your config file and dataset.
-          # Ensure the config file has an 'output' field set to the desired results file (e.g., output: ./main-results.json)
-          rageval run ./path/to/config.yaml
-          echo "results-path=./main-results.json" >> $GITHUB_OUTPUT
+          # Use the temporary config file at ./eval_config.yaml
+          # Replace this with your own config file path and adjust the output field in the config.
+          rageval run ./eval_config.yaml
+          echo "results-path=./eval_results.json" >> $GITHUB_OUTPUT
   comment:
     runs-on: ubuntu-latest
     needs: [evaluate-pr, evaluate-main]
