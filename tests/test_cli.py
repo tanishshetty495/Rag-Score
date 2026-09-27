@@ -221,7 +221,8 @@ class TestSynthesizeCommand:
             assert result.exit_code != 0
             # Check that it didn't fail on parameter parsing
             assert "Invalid value for '--query-types'" not in result.output
-            assert "Unknown query type" not in result.output  # Should not fail on valid types
+            # Should not fail on valid types
+            assert "Unknown query type" not in result.output
             # Should get to the synthesis step
             assert "Loaded 1 document(s) from docs" in result.output
             assert "Chunking at" in result.output and "words (overlap" in result.output
@@ -406,3 +407,101 @@ class TestProgressBar:
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code == 0
             assert "tool_selection_recall" in result.output
+
+
+class TestCompareCommand:
+    def _write_result_file(self, runner_fs, filename, summary_data):
+        """Helper to write a minimal result file with the given summary."""
+        # The result file must have at least run_id, summary, results, scores.
+        # We'll provide minimal dummy values for results and scores.
+        payload = {
+            "run_id": "test-run",
+            "summary": summary_data,
+            "results": [],  # empty list is fine for summary-based comparison
+            "scores": [],
+        }
+        with open(filename, "w") as f:
+            json.dump(payload, f)
+
+    def test_compare_basic(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            # Write two result files with different summaries
+            self._write_result_file(runner, "a.json", {"precision_at_5": 0.8, "faithfulness": 0.9})
+            self._write_result_file(runner, "b.json", {"precision_at_5": 0.85, "faithfulness": 0.85})
+            result = runner.invoke(cli, ["compare", "a.json", "b.json"])
+            assert result.exit_code == 0
+            # Check the output table
+            assert "| Metric | main | This PR | Delta |" in result.output
+            assert "|---|---|---|---|" in result.output
+            # precision_at_5: 0.8 -> 0.85, delta +0.05 (>0.02) -> improvement
+            assert "| precision_at_5 | 0.800 | 0.850 | +0.050 ✅ |" in result.output
+            # faithfulness: 0.9 -> 0.85, delta -0.05 (<-0.02) -> regression
+            assert "| faithfulness | 0.900 | 0.850 | -0.050 ⚠️ |" in result.output
+
+    def test_compare_missing_metric(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            self._write_result_file(runner, "a.json", {"precision_at_5": 0.8})
+            self._write_result_file(runner, "b.json", {"faithfulness": 0.9})
+            result = runner.invoke(cli, ["compare", "a.json", "b.json"])
+            assert result.exit_code == 0
+            assert "| precision_at_5 | 0.800 | N/A | N/A |" in result.output
+            assert "| faithfulness | N/A | 0.900 | N/A |" in result.output
+
+    def test_compare_output_file(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            self._write_result_file(runner, "a.json", {"precision_at_5": 0.8})
+            self._write_result_file(runner, "b.json", {"precision_at_5": 0.9})
+            result = runner.invoke(cli, ["compare", "a.json", "b.json", "--output", "comparison.md"])
+            assert result.exit_code == 0
+            assert "Comparison table written to comparison.md" in result.output
+            import os
+            assert os.path.exists("comparison.md")
+            with open("comparison.md", "r", encoding="utf-8") as f:
+                content = f.read()
+            assert "| Metric | main | This PR | Delta |" in content
+            assert "| precision_at_5 | 0.800 | 0.900 | +0.100 ✅ |" in content
+
+    def test_compare_threshold(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            self._write_result_file(runner, "a.json", {"precision_at_5": 0.8})
+            self._write_result_file(runner, "b.json", {"precision_at_5": 0.81})  # delta 0.01, within threshold
+            result = runner.invoke(cli, ["compare", "a.json", "b.json", "--threshold", "0.02"])
+            assert result.exit_code == 0
+            # Should show delta without emoji
+            assert "| precision_at_5 | 0.800 | 0.810 | +0.010 |" in result.output
+            # Now with a lower threshold, 0.01 should be considered improvement
+            result = runner.invoke(cli, ["compare", "a.json", "b.json", "--threshold", "0.005"])
+            assert result.exit_code == 0
+            assert "| precision_at_5 | 0.800 | 0.810 | +0.010 ✅ |" in result.output
+
+    def test_compare_malformed_json(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            # Write a malformed JSON file
+            with open("bad.json", "w") as f:
+                f.write("{ not valid json")
+            self._write_result_file(runner, "good.json", {"precision_at_5": 0.8})
+            result = runner.invoke(cli, ["compare", "bad.json", "good.json"])
+            assert result.exit_code != 0
+            assert "Failed to read or parse JSON file" in result.output
+            assert "Traceback" not in result.output
+
+            result = runner.invoke(cli, ["compare", "good.json", "bad.json"])
+            assert result.exit_code != 0
+            assert "Failed to read or parse JSON file" in result.output
+            assert "Traceback" not in result.output
+
+    def test_compare_missing_summary(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            # Write a result file missing the summary field
+            with open("nosummary.json", "w") as f:
+                f.write('{"run_id": "test", "results": [], "scores": []}')
+            self._write_result_file(runner, "good.json", {"precision_at_5": 0.8})
+            result = runner.invoke(cli, ["compare", "nosummary.json", "good.json"])
+            assert result.exit_code != 0
+            assert "is missing or has invalid 'summary' field" in result.output

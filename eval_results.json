@@ -1,0 +1,35 @@
+{
+  "run_id": "run-eval_config",
+  "summary": {
+    "precision_at_5": 1.0
+  },
+  "results": [
+    {
+      "evaluation_id": "92d4fe9b-4673-4f2a-be6f-34191cb2096a",
+      "run_id": "run-eval_config",
+      "test_case_id": "63bc8c24-613a-4c07-aaa0-3961315a13b5",
+      "retrieved_context": [
+        {
+          "doc_id": "doc_1",
+          "text": "This is a test document about apples.",
+          "score": null
+        }
+      ],
+      "generated_answer": "The answer is apples.",
+      "retrieval_latency_ms": 0.011600001016631722,
+      "generation_latency_ms": 0.0023000029614195228,
+      "total_tokens": null,
+      "estimated_cost_usd": null,
+      "error": null
+    }
+  ],
+  "scores": [
+    {
+      "score_id": "1eddc138-122e-4633-bcde-ae23ac73a34a",
+      "evaluation_id": "92d4fe9b-4673-4f2a-be6f-34191cb2096a",
+      "metric_name": "precision_at_5",
+      "score_value": 1.0,
+      "judge_reasoning": null
+    }
+  ]
+}

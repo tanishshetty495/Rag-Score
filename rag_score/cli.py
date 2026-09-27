@@ -483,10 +483,6 @@ def synthesize(
             click.echo(f"  {err}")
 
 
-
-
-
-
 # ---------------------------------------------------------------------------
 # Trajectory metric name -> instance resolution
 # ---------------------------------------------------------------------------
@@ -569,6 +565,81 @@ def run_trajectory(config_path: str) -> None:
         }
         Path(output_path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         click.echo(f"\nFull results written to {output_path}")
+
+
+@cli.command()
+@click.argument("results_a_path", type=click.Path(exists=True))
+@click.argument("results_b_path", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
+@click.option("--threshold", "-t", default=0.02, show_default=True, help="Threshold for considering a change as improvement/regression.")
+def compare(results_a_path: str, results_b_path: str, output: str | None, threshold: float) -> None:
+    """Compare two ragscore result files and output a markdown table of metric differences."""
+    # Ensure stdout can handle UTF-8 (e.g., emojis) on Windows consoles
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    try:
+        with open(results_a_path, "r", encoding="utf-8") as f:
+            data_a = json.load(f)
+        with open(results_b_path, "r", encoding="utf-8") as f:
+            data_b = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise click.ClickException(f"Failed to read or parse JSON file: {e}") from None
+
+    # Validate the expected structure
+    for label, data in [("A", data_a), ("B", data_b)]:
+        if not isinstance(data, dict):
+            raise click.ClickException(f"Results file {label} does not contain a JSON object.")
+        if "summary" not in data or not isinstance(data["summary"], dict):
+            raise click.ClickException(f"Results file {label} is missing or has invalid 'summary' field.")
+
+    summary_a = data_a["summary"]
+    summary_b = data_b["summary"]
+
+    # Get all unique metric names from both summaries
+    all_metrics = set(summary_a.keys()) | set(summary_b.keys())
+
+    # Prepare rows for the markdown table
+    rows = []
+    for metric in sorted(all_metrics):
+        val_a = summary_a.get(metric)
+        val_b = summary_b.get(metric)
+
+        # Format values or N/A
+        str_a = f"{val_a:.3f}" if val_a is not None else "N/A"
+        str_b = f"{val_b:.3f}" if val_b is not None else "N/A"
+
+        # Compute delta if both present
+        if val_a is not None and val_b is not None:
+            delta = val_b - val_a
+            if delta >= threshold:
+                delta_str = f"+{delta:.3f} ✅"
+            elif delta <= -threshold:
+                delta_str = f"{delta:.3f} ⚠️"
+            else:
+                delta_str = f"{delta:+.3f}"
+        else:
+            delta_str = "N/A"
+
+        rows.append((metric, str_a, str_b, delta_str))
+
+    # Build markdown table
+    lines = [
+        "| Metric | main | This PR | Delta |",
+        "|---|---|---|---|",
+    ]
+    for metric, a, b, d in rows:
+        lines.append(f"| {metric} | {a} | {b} | {d} |")
+
+    table = "\n".join(lines)
+
+    if output:
+        try:
+            Path(output).write_text(table + "\n", encoding="utf-8")
+            click.echo(f"Comparison table written to {output}")
+        except OSError as e:
+            raise click.ClickException(f"Failed to write output file: {e}") from None
+    else:
+        click.echo(table)
 
 
 def main() -> None:
