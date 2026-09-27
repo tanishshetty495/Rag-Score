@@ -14,7 +14,7 @@ jobs:
         with:
           ref: ${{ github.head_ref }}  # or github.event.pull_request.head.sha
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python=v5
         with:
           python-version: "3.12"
           cache: "pip"
@@ -23,19 +23,16 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Ensure the config file exists; create a temporary one if missing
           if [ ! -f eval_config.yaml ]; then
-            cat > eval_config.yaml << 'EOF'
-            # Temporary config file for the CI/CD workflow.
-            # Replace this with your own pipeline's configuration.
-            # See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details.
-
-            dataset: test_smoke/test_set.json
-            retriever: test_smoke.fake_pipeline:my_retriever
-            generator: test_smoke.fake_pipeline:my_generator
-            metrics: [precision_at_5]
-            output: ./eval_results.json
-            EOF
+            echo "# Temporary config file for the CI/CD workflow." > eval_config.yaml
+            echo "# Replace this with your own pipeline's configuration." >> eval_config.yaml
+            echo "# See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details." >> eval_config.yaml
+            echo "" >> eval_config.yaml
+            echo "dataset: test_smoke/test_set.json" >> eval_config.yaml
+            echo "retriever: test_smoke.fake_pipeline:my_retriever" >> eval_config.yaml
+            echo "generator: test_smoke.fake_pipeline:my_generator" >> eval_config.yaml
+            echo "metrics: [precision_at_5]" >> eval_config.yaml
+            echo "output: ./eval_results.json" >> eval_config.yaml
           fi
           # Use the config file at ./eval_config.yaml
           # Replace this with your own config file path and adjust the output field in the config.
@@ -50,7 +47,7 @@ jobs:
         with:
           ref: main
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python=v5
         with:
           python-version: "3.12"
           cache: "pip"
@@ -59,19 +56,16 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Ensure the config file exists; create a temporary one if missing
           if [ ! -f eval_config.yaml ]; then
-            cat > eval_config.yaml << 'EOF'
-            # Temporary config file for the CI/CD workflow.
-            # Replace this with your own pipeline's configuration.
-            # See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details.
-
-            dataset: test_smoke/test_set.json
-            retriever: test_smoke.fake_pipeline:my_retriever
-            generator: test_smoke.fake_pipeline:my_generator
-            metrics: [precision_at_5]
-            output: ./eval_results.json
-            EOF
+            echo "# Temporary config file for the CI/CD workflow." > eval_config.yaml
+            echo "# Replace this with your own pipeline's configuration." >> eval_config.yaml
+            echo "# See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details." >> eval_config.yaml
+            echo "" >> eval_config.yaml
+            echo "dataset: test_smoke/test_set.json" >> eval_config.yaml
+            echo "retriever: test_smoke.fake_pipeline:my_retriever" >> eval_config.yaml
+            echo "generator: test_smoke.fake_pipeline:my_generator" >> eval_config.yaml
+            echo "metrics: [precision_at_5]" >> eval_config.yaml
+            echo "output: ./eval_results.json" >> eval_config.yaml
           fi
           # Use the config file at ./eval_config.yaml
           # Replace this with your own config file path and adjust the output field in the config.
@@ -83,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python=v5
         with:
           python-version: "3.12"
           cache: "pip"
@@ -94,7 +88,7 @@ jobs:
         run: |
           rageval compare ${{ needs.evaluate-pr.outputs.results-path }} ${{ needs.evaluate-main.outputs.results-path }} --output ./comparison.md
       - name: Post comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment=v2
         with:
           path: ./comparison.md
           header: "ragmark-eval-results"
