@@ -1,0 +1,10 @@
+{
+  "run_id": "run-b",
+  "summary": {
+    "precision_at_5": 0.82,
+    "faithfulness": 0.93,
+    "mrr": 0.80
+  },
+  "results": [],
+  "scores": []
+}

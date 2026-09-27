@@ -303,6 +303,10 @@ Each generated test case is tagged with its query type in the `metadata` field f
 }
 ```
 
+## CI/CD Integration
+
+See [CI/CD integration guide](docs/ci-cd-integration.md) for instructions on setting up automated evaluation in your GitHub Actions workflow.
+
 ## Roadmap
 
 Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
