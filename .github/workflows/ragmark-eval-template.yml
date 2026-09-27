@@ -23,7 +23,21 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Use the temporary config file at ./eval_config.yaml
+          # Ensure the config file exists; create a temporary one if missing
+          if [ ! -f eval_config.yaml ]; then
+            cat > eval_config.yaml << 'EOF'
+            # Temporary config file for the CI/CD workflow.
+            # Replace this with your own pipeline's configuration.
+            # See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details.
+
+            dataset: test_smoke/test_set.json
+            retriever: test_smoke.fake_pipeline:my_retriever
+            generator: test_smoke.fake_pipeline:my_generator
+            metrics: [precision_at_5]
+            output: ./eval_results.json
+            EOF
+          fi
+          # Use the config file at ./eval_config.yaml
           # Replace this with your own config file path and adjust the output field in the config.
           rageval run ./eval_config.yaml
           echo "results-path=./eval_results.json" >> $GITHUB_OUTPUT
@@ -45,7 +59,21 @@ jobs:
       - name: Run evaluation
         id: evaluate
         run: |
-          # Use the temporary config file at ./eval_config.yaml
+          # Ensure the config file exists; create a temporary one if missing
+          if [ ! -f eval_config.yaml ]; then
+            cat > eval_config.yaml << 'EOF'
+            # Temporary config file for the CI/CD workflow.
+            # Replace this with your own pipeline's configuration.
+            # See https://github.com/tanishshetty495/Rag-Score/blob/main/docs/configuration.md for details.
+
+            dataset: test_smoke/test_set.json
+            retriever: test_smoke.fake_pipeline:my_retriever
+            generator: test_smoke.fake_pipeline:my_generator
+            metrics: [precision_at_5]
+            output: ./eval_results.json
+            EOF
+          fi
+          # Use the config file at ./eval_config.yaml
           # Replace this with your own config file path and adjust the output field in the config.
           rageval run ./eval_config.yaml
           echo "results-path=./eval_results.json" >> $GITHUB_OUTPUT
