@@ -31,6 +31,7 @@ Auto-generated from docstrings in the source.
 ::: rag_score.metrics.generation.faithfulness.Faithfulness
 ::: rag_score.metrics.generation.answer_relevance.AnswerRelevance
 ::: rag_score.metrics.generation.context_precision.ContextPrecision
+::: rag_score.metrics.generation.context_carry_over.ContextCarryOver
 ::: rag_score.metrics.generation.local_faithfulness.LocalSemanticFaithfulness
 ::: rag_score.metrics.generation.local_answer_relevance.LocalSemanticAnswerRelevance
 

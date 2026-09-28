@@ -31,6 +31,7 @@ nav:
   - Quickstart: quickstart.md
   - Metrics: metrics.md
   - Configuration reference: configuration.md
+  - CI/CD Integration: ci-cd-integration.md
   - Framework adapters: adapters.md
   - Agentic trajectory evaluation: agentic.md
   - API reference: api-reference.md

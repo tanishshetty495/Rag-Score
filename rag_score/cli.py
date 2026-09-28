@@ -47,6 +47,7 @@ from rag_score.export.sqlite_export import export_to_sqlite
 from rag_score.judges.base import LLMJudge
 from rag_score.metrics.base import Metric
 from rag_score.metrics.generation.answer_relevance import AnswerRelevance
+from rag_score.metrics.generation.context_carry_over import ContextCarryOver
 from rag_score.metrics.generation.context_precision import ContextPrecision
 from rag_score.metrics.generation.faithfulness import Faithfulness
 from rag_score.metrics.generation.local_answer_relevance import (
@@ -205,6 +206,7 @@ _JUDGE_METRICS: dict[str, type[Metric]] = {
     "faithfulness": Faithfulness,
     "answer_relevance": AnswerRelevance,
     "context_precision": ContextPrecision,
+    "context_carry_over": ContextCarryOver,
 }
 
 _LOCAL_ML_METRICS: dict[str, type[Metric]] = {

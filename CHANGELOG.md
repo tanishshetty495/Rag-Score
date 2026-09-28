@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## [0.9.0]
+
+### Added
+- New metric: ContextCarryOver for evaluating multi-turn conversational RAG systems. Measures whether generated answers correctly resolve references (pronouns, ellipsis, "the second one", "that plan") to earlier turns in the conversation.
+  - Implemented in `rag_score/metrics/generation/context_carry_over.py`.
+  - Requires an LLM judge; returns 0.0 without calling the judge when conversation history is missing or malformed.
+  - Runner integration: passes conversation history to generators that opt in via a `history` keyword argument in their `generate` method.
+  - CLI registration: available as `context_carry_over` in config metrics arrays.
+  - Documentation: added to `docs/metrics.md` and `docs/api-reference.md`.
+  - Example: `examples/multi_turn_example.py` demonstrates usage with fake retriever, generator, and judge.
+- Updated telemetry token counting to include conversation history text when passed to the generator.
+
 ## [0.8.0]
 
 ### Added
