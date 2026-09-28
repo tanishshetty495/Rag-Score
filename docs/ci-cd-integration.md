@@ -43,6 +43,7 @@ This guide explains how to integrate ragmark evaluation into your CI/CD pipeline
    - Pass the API key as an environment variable to the `rageval run` step and reference it in your config via environment variable interpolation (if your config supports it).
 
    Alternatively, you can avoid storing API keys in the config by setting them as environment variables in the workflow and having your config read from environment variables (see the [configuration](configuration.md) documentation for details).
+   Alternatively, you can avoid storing API keys in the config by setting them as environment variables in the workflow and having your config read from environment variables (see the [configuration](../configuration.md) documentation for details).
 
 ## What to Expect
 
@@ -85,3 +86,6 @@ You can adjust the threshold for what counts as an improvement or regression by 
 - [Configuration Guide](configuration.md): Learn how to structure your evaluation config.
 - [Metrics Reference](metrics.md): Details on available metrics and their requirements.
 - [Quickstart](quickstart.md): A quick introduction to running ragmark locally.
+- [Configuration Guide](../configuration.md): Learn how to structure your evaluation config.
+- [Metrics Reference](../metrics.md): Details on available metrics and their requirements.
+- [Quickstart](../quickstart.md): A quick introduction to running ragmark locally.
