@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here.
 
+## [0.9.0]
+
+### Added
+- New metric: ContextCarryOver for evaluating multi-turn conversational RAG systems. Measures whether generated answers correctly resolve references (pronouns, ellipsis, "the second one", "that plan") to earlier turns in the conversation.
+  - Implemented in `rag_score/metrics/generation/context_carry_over.py`.
+  - Requires an LLM judge; returns 0.0 without calling the judge when conversation history is missing or malformed.
+  - Runner integration: passes conversation history to generators that opt in via a `history` keyword argument in their `generate` method.
+  - CLI registration: available as `context_carry_over` in config metrics arrays.
+  - Documentation: added to `docs/metrics.md` and `docs/api-reference.md`.
+  - Example: `examples/multi_turn_example.py` demonstrates usage with fake retriever, generator, and judge.
+- Updated telemetry token counting to include conversation history text when passed to the generator.
+
+## [0.8.0]
+
+### Added
+- New CLI command: `rageval compare <results_a.json> <results_b.json>` to compare two evaluation result files and output a Markdown table of metric differences.
+  - Computes per-metric average scores from the `summary` field in each result file (no recomputation from raw scores).
+  - Outputs a Markdown table by default, with optional `--output` flag to write to a file.
+  - Uses ✅ for improvements (delta > threshold, default 0.02), ⚠️ for regressions (delta < -threshold), and no emoji for negligible changes.
+  - Handles missing metrics gracefully (shows "N/A" for missing side).
+  - Handles malformed JSON input with clean error messages (no traceback).
+- New GitHub Actions workflow template: `.github/workflows/ragmark-eval-template.yml` for CI/CD integration.
+  - Triggers on pull_request.
+  - Evaluates the PR branch and the main branch separately using `rageval run`.
+  - Compares results with `rageval compare` and posts the Markdown table as a PR comment using `marocchino/sticky-pull-request-comment`.
+  - Includes clear comments indicating where users must customize (config path, dataset path, Python version, API key secrets).
+- New documentation page: `docs/ci-cd-integration.md` explaining how to use the workflow template, customize it, set required secrets, and interpret the resulting PR comment.
+
 ## [0.7.0]
 
 ### Added

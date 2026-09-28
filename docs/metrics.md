@@ -24,6 +24,7 @@ These call an LLM to assess quality that can't be reduced to set membership - wh
 | `faithfulness` | [`Faithfulness`][rag_score.metrics.generation.faithfulness.Faithfulness] | Is every claim in the answer supported by the retrieved context? | Yes | Yes |
 | `answer_relevance` | [`AnswerRelevance`][rag_score.metrics.generation.answer_relevance.AnswerRelevance] | Does the answer actually address the question asked? | No | Yes |
 | `context_precision` | [`ContextPrecision`][rag_score.metrics.generation.context_precision.ContextPrecision] | Of the retrieved chunks, what fraction are relevant? | Yes | No |
+| `context_carry_over` | [`ContextCarryOver`][rag_score.metrics.generation.context_carry_over.ContextCarryOver] | Does the answer correctly resolve references to earlier turns in the conversation? | Yes | Yes |
 
 A metric returns `0.0` without calling the judge when its required inputs are missing (e.g. `faithfulness` on an empty answer) - this avoids wasting an API call on input that can't be meaningfully judged.
 

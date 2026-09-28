@@ -223,6 +223,15 @@ pip install ragmark[local-ml]
 
 The model (`all-MiniLM-L6-v2` by default, [sentence-transformers](https://www.sbert.net/)) downloads once on first use, then runs fully offline. This trades some accuracy for speed and zero cost - cosine similarity catches "the answer is about something completely different" reliably, but won't reason about factual correctness the way an LLM judge can. Use it as a fast free first pass, or alongside `faithfulness`/`answer_relevance` rather than as a strict replacement for them.
 
+## Context carry-over metric (multi-turn conversations)
+
+Evaluating multi-turn RAG systems where later questions depend on earlier turns? The `context_carry_over` metric measures whether generated answers correctly resolve references (pronouns, ellipsis, "the second one", "that plan") to earlier turns in the conversation.
+
+- Requires an LLM judge; returns 0.0 without calling the judge when conversation history is missing or malformed.
+- The runner passes conversation history to generators that opt in via a `history` keyword argument in their `generate` method.
+- Available as `context_carry_over` in config metrics arrays.
+- See `examples/multi_turn_example.py` for a runnable demonstration.
+
 ## Agentic trajectory evaluation
 
 Evaluating a multi-step agent (one that calls tools before answering) instead of a single retrieve-then-generate pass? `rageval run-trajectory` is a separate command for that:
@@ -302,6 +311,10 @@ Each generated test case is tagged with its query type in the `metadata` field f
   "metadata": {"query_type": "adversarial"}
 }
 ```
+
+## CI/CD Integration
+
+See [CI/CD integration guide](docs/ci-cd-integration.md) for instructions on setting up automated evaluation in your GitHub Actions workflow.
 
 ## Roadmap
 

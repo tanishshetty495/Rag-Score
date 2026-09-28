@@ -13,6 +13,7 @@ multi-hour sequential slog into something that finishes in minutes.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -62,8 +63,39 @@ async def _run_single(
             result.retrieval_latency_ms = (time.perf_counter() - t0) * 1000
             result.retrieved_context = context
 
+            # Extract conversation history from metadata if present and valid
+            history_raw = test_case.metadata.get("conversation_history")
+            history = None
+            history_formatted = None
+            if isinstance(history_raw, list) and history_raw:
+                # Validate each entry
+                valid = True
+                formatted_lines = []
+                for i, turn in enumerate(history_raw):
+                    if not isinstance(turn, dict):
+                        valid = False
+                        break
+                    role = turn.get("role")
+                    content = turn.get("content")
+                    if not isinstance(role, str) or not isinstance(content, str):
+                        valid = False
+                        break
+                    formatted_lines.append(f"{role.capitalize()}: {content}")
+                if valid:
+                    history = history_raw
+                    history_formatted = "\n".join(formatted_lines)
+
+            # Check if the generator opts in to history via a 'history' keyword argument
+            gen_sig = inspect.signature(generator.generate)
+            opts_in_history = "history" in gen_sig.parameters
+
             t1 = time.perf_counter()
-            answer = await generator.generate(test_case.question, context)
+            if opts_in_history and history is not None:
+                answer = await generator.generate(
+                    test_case.question, context, history=history
+                )
+            else:
+                answer = await generator.generate(test_case.question, context)
             result.generation_latency_ms = (time.perf_counter() - t1) * 1000
             result.generated_answer = answer
 
@@ -71,9 +103,12 @@ async def _run_single(
             if config.telemetry is not None:
                 from rag_score.telemetry import count_tokens, estimate_cost
 
-                prompt_text = test_case.question + " " + " ".join(
-                    c.text for c in context
-                )
+                # Build prompt text: question + context + (history if passed)
+                prompt_parts = [test_case.question]
+                if history_formatted is not None:
+                    prompt_parts.append(history_formatted)
+                prompt_parts.extend(c.text for c in context)
+                prompt_text = " ".join(prompt_parts)
                 model_name = config.telemetry.model_name
                 prompt_tokens = count_tokens(prompt_text, model_name)
                 completion_tokens = count_tokens(answer, model_name)
