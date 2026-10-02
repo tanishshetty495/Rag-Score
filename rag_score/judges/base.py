@@ -23,6 +23,8 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field
 
+from rag_score.cache import JudgeCache
+
 
 class JudgeVerdict(BaseModel):
     """A judge's verdict on one generation-quality question: a 0-1
@@ -53,6 +55,9 @@ class LLMJudge(ABC):
     max_retries: int = 2
     retry_base_delay: float = 1.0
 
+    def __init__(self, cache: JudgeCache | None = None) -> None:
+        self.cache = cache
+
     @abstractmethod
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         """Send the prompts to the underlying model and return its raw
@@ -68,8 +73,38 @@ class LLMJudge(ABC):
         rather than silently returning a fabricated 0.0 - a parsing
         failure is a real problem the user should see, not a score
         that looks like a genuine low-quality verdict."""
+        # If caching is enabled, try to get a cached verdict first
+        if self.cache is not None:
+            # Compute cache key from the judge inputs and identity
+            key = self._cache_key(system_prompt, user_prompt)
+            cached_verdict = await self.cache.get(key)
+            if cached_verdict is not None:
+                return cached_verdict
+
+        # Cache miss or caching disabled: get a fresh verdict
         raw = await self._complete_with_retry(system_prompt, user_prompt)
-        return _parse_verdict(raw)
+        verdict = _parse_verdict(raw)
+
+        # Store the verdict in cache if caching is enabled and the verdict is valid
+        if self.cache is not None:
+            await self.cache.set(key, verdict)
+
+        return verdict
+
+    def _cache_key(self, system_prompt: str, user_prompt: str) -> str:
+        """Create a cache key for the given prompts and this judge's identity.
+
+        Subclasses must set `provider` and `model_name` attributes.
+        """
+        from rag_score.cache import _make_cache_key
+
+        return _make_cache_key(
+            metric_name="",  # Not needed because prompts are metric-specific
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            provider=self.provider,  # type: ignore[attr-defined]
+            model_name=self.model_name,  # type: ignore[attr-defined]
+        )
 
     async def _complete_with_retry(self, system_prompt: str, user_prompt: str) -> str:
         last_exc: Exception | None = None

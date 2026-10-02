@@ -40,6 +40,7 @@ from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
 from rag_score.agentic.metrics_base import TrajectoryMetric
 from rag_score.agentic.runner import TrajectoryRunConfig, run_trajectory_evaluation
 from rag_score.agentic.types import load_trajectory_dataset
+from rag_score.cache import JudgeCache
 from rag_score.core.dataset import load_dataset
 from rag_score.core.runner import RunConfig, run_evaluation
 from rag_score.core.types import DimRun
@@ -157,12 +158,29 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
     if "retry_base_delay" in judge_config:
         retry_kwargs["retry_base_delay"] = judge_config["retry_base_delay"]
 
+    # Cache configuration
+    cache_config_dict = judge_config.get("cache")
+    cache: JudgeCache | None = None
+    if cache_config_dict and cache_config_dict.get("enabled", False):
+        from rag_score.cache import CacheConfig, get_cache_backend
+
+        cache_config = CacheConfig(
+            backend=cache_config_dict.get("backend", "memory"),
+            path=cache_config_dict.get("path", ".ragmark_cache/judge_cache.db"),
+            max_age_seconds=cache_config_dict.get("max_age_seconds"),
+            ignore_cache=cache_config_dict.get("ignore_cache", False),
+        )
+        print(f"Cache config: {cache_config}")
+        cache = get_cache_backend(cache_config)
+        print(f"Cache backend: {cache} (type: {type(cache)})")
+
     if provider == "openai":
         from rag_score.judges.openai_judge import OpenAIJudge
 
         kwargs = {"api_key": api_key, **retry_kwargs}
         if model:
             kwargs["model"] = model
+        kwargs["cache"] = cache
         return OpenAIJudge(**kwargs)
 
     if provider == "anthropic":
@@ -171,6 +189,7 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
         kwargs = {"api_key": api_key, **retry_kwargs}
         if model:
             kwargs["model"] = model
+        kwargs["cache"] = cache
         return AnthropicJudge(**kwargs)
 
     if provider == "local":
@@ -185,6 +204,7 @@ def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
         base_url = judge_config.get("base_url")
         if base_url:
             kwargs["base_url"] = base_url
+        kwargs["cache"] = cache
         return LocalJudge(**kwargs)
 
     raise click.ClickException(
@@ -369,6 +389,16 @@ def run(config_path: str) -> None:
 
     _print_summary(summary, len(report.results), num_errors)
     _write_github_step_summary(summary, len(report.results), num_errors)
+
+    # Print cache effectiveness if caching was enabled
+    if judge is not None and hasattr(judge, "cache") and judge.cache is not None:
+        hits, misses = judge.cache.stats()
+        total = hits + misses
+        if total > 0:
+            hit_rate = (hits / total) * 100
+            click.echo(f"Judge cache: {hits} hits, {misses} misses ({hit_rate:.0f}% hit rate)")
+        else:
+            click.echo("Judge cache: 0 hits, 0 misses (0% hit rate)")
 
     output_path = config.get("output")
     if output_path:

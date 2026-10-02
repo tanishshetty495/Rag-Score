@@ -105,10 +105,11 @@ class FakeJudge(LLMJudge):
     formatted the way a real model actually responds (wrapped in a
     markdown fence) so the full judge() parsing path gets exercised."""
 
-    def __init__(self, score: float = 0.8, reasoning: str = "Looks reasonable.") -> None:
+    def __init__(self, score: float = 0.8, reasoning: str = "Looks reasonable.", cache=None) -> None:
         self._score = score
         self._reasoning = reasoning
         self.call_count = 0
+        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         self.call_count += 1

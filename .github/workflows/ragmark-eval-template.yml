@@ -18,6 +18,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+      - name: Cache judge cache directory
+        uses: actions/cache@v4
+        with:
+          path: .ragmark_cache
+          key: ${{ runner.os }}-judge-cache-${{ hashFiles('**/eval_config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-judge-cache-
       - name: Install package
         run: pip install -e ".[dev]"
       - name: Run evaluation
@@ -51,6 +58,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+      - name: Cache judge cache directory
+        uses: actions/cache@v4
+        with:
+          path: .ragmark_cache
+          key: ${{ runner.os }}-judge-cache-${{ hashFiles('**/eval_config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-judge-cache-
       - name: Install package
         run: pip install -e ".[dev]"
       - name: Run evaluation

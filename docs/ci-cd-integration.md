@@ -84,4 +84,3 @@ You can adjust the threshold for what counts as an improvement or regression by 
 - [Configuration Guide](configuration.md): Learn how to structure your evaluation config.
 - [Metrics Reference](metrics.md): Details on available metrics and their requirements.
 - [Quickstart](quickstart.md): A quick introduction to running ragmark locally.
-

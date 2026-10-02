@@ -1,0 +1,16 @@
+dataset: demo_test_set.json
+retriever: demo_pipeline:my_retriever
+generator: demo_pipeline:my_generator
+metrics: [faithfulness]
+judge:
+  provider: local
+  model: demo-model
+  base_url: http://localhost:8000/v1
+  api_key: not-needed
+  cache:
+    enabled: true
+    backend: file
+    path: .ragmark_cache/judge_cache.db
+    max_age_seconds: 86400
+top_k: 1
+max_concurrency: 1

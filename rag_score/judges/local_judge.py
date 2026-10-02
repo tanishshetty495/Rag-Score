@@ -16,6 +16,7 @@ dummy API key.
 
 from __future__ import annotations
 
+from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
 
 # Ollama's default local server address - the vast majority of users
@@ -24,6 +25,8 @@ _DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
 
 class LocalJudge(LLMJudge):
+    provider = "local"
+
     def __init__(
         self,
         model: str,
@@ -32,6 +35,7 @@ class LocalJudge(LLMJudge):
         temperature: float = 0.0,
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
+        cache: JudgeCache | None = None,
     ) -> None:
         """
         model: the model name as your local server knows it, e.g.
@@ -60,6 +64,8 @@ class LocalJudge(LLMJudge):
         self.temperature = temperature
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
+        self.model_name = model
+        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         response = await self._client.chat.completions.create(
