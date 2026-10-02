@@ -1,0 +1,10 @@
+[
+  {
+    "question": "What is the capital of France?",
+    "expected_doc_ids": ["doc1"]
+  },
+  {
+    "question": "What is the capital of Germany?",
+    "expected_doc_ids": ["doc2"]
+  }
+]

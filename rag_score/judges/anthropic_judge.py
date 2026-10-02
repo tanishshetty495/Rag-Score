@@ -7,10 +7,13 @@ when this class is actually instantiated.
 
 from __future__ import annotations
 
+from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
 
 
 class AnthropicJudge(LLMJudge):
+    provider = "anthropic"
+
     def __init__(
         self,
         model: str = "claude-haiku-4-5",
@@ -18,6 +21,7 @@ class AnthropicJudge(LLMJudge):
         max_tokens: int = 512,
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
+        cache: JudgeCache | None = None,
     ) -> None:
         try:
             from anthropic import AsyncAnthropic
@@ -33,6 +37,8 @@ class AnthropicJudge(LLMJudge):
         self.max_tokens = max_tokens
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
+        self.model_name = model
+        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         response = await self._client.messages.create(

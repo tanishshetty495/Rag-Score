@@ -12,6 +12,12 @@ All notable changes to this project are documented here.
   - CLI registration: available as `context_carry_over` in config metrics arrays.
   - Documentation: added to `docs/metrics.md` and `docs/api-reference.md`.
   - Example: `examples/multi_turn_example.py` demonstrates usage with fake retriever, generator, and judge.
+- Judge response caching: avoid re-paying for identical LLM judge calls when re-running evaluations on unchanged test cases.
+  - New `rag_score.cache` module with `JudgeCache` protocol, `InMemoryCacheBackend`, `FileCacheBackend`, and `CacheConfig`.
+  - Integrated into `LLMJudge.judge()` in `rag_score/judges/base.py`; optional `cache` parameter added to judge constructors.
+  - CLI wiring: add a `cache` section to the judge config, e.g. `{"provider": "openai", "cache": {"enabled": true, "path": ".ragmark_cache/judge_cache.db", "max_age_seconds": 86400}}`.
+  - Cache effectiveness printed after each run: "Judge cache: 34 hits, 12 misses (74% hit rate)".
+  - Updated CI workflow template (`.github/workflows/ragmark-eval-template.yml`) to persist the cache directory between runs using `actions/cache`.
 - Updated telemetry token counting to include conversation history text when passed to the generator.
 
 ## [0.8.0]

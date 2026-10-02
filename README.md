@@ -316,6 +316,40 @@ Each generated test case is tagged with its query type in the `metadata` field f
 
 See [CI/CD integration guide](docs/ci-cd-integration.md) for instructions on setting up automated evaluation in your GitHub Actions workflow.
 
+## Judge response caching (v0.5)
+
+Enable caching to avoid re-paying for identical LLM judge calls when re-running evaluations on unchanged test cases. Add a `cache` section to your judge configuration:
+
+```json
+{
+  "dataset": "test_set.json",
+  "retriever": "my_pipeline:my_retriever",
+  "generator": "my_pipeline:my_generator",
+  "metrics": ["faithfulness", "answer_relevance"],
+  "judge": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "cache": {
+      "enabled": true,
+      "path": ".ragmark_cache/judge_cache.db",
+      "max_age_seconds": 86400
+    }
+  }
+}
+```
+
+- `enabled`: Set to `true` to turn on caching (default: `false` if omitted)
+- `path`: File path for the SQLite cache (default: `.ragmark_cache/judge_cache.db`)
+- `max_age_seconds`: Cache entry TTL in seconds (`None` means no expiry)
+- `ignore_cache`: Set to `true` to force a fresh read (useful for testing)
+
+After a `rageval run` completes with caching enabled, a one-line summary is printed:
+```
+Judge cache: 34 hits, 12 misses (74% hit rate)
+```
+
+The cache is keyed on the actual judge inputs (metric name, system prompt, user prompt, and judge's provider + model name), so it correctly handles changes to any of these fields.
+
 ## Roadmap
 
 Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).

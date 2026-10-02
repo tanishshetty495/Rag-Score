@@ -11,11 +11,12 @@ from rag_score.judges.base import LLMJudge
 
 
 class _FlakyJudge(LLMJudge):
-    def __init__(self, fail_count: int, max_retries: int = 2, retry_base_delay: float = 0.001):
+    def __init__(self, fail_count: int, max_retries: int = 2, retry_base_delay: float = 0.001, cache=None):
         self.fail_count = fail_count
         self.call_count = 0
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
+        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         self.call_count += 1

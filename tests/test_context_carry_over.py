@@ -18,12 +18,13 @@ from rag_score.metrics.generation.context_carry_over import ContextCarryOver
 class FakeJudge(LLMJudge):
     """A fake judge that records calls and returns a deterministic score."""
 
-    def __init__(self, score: float = 0.8, reasoning: str = "Fake reasoning"):
+    def __init__(self, score: float = 0.8, reasoning: str = "Fake reasoning", cache=None):
         self.score = score
         self.reasoning = reasoning
         self.called = False
         self.system_prompt: str | None = None
         self.user_prompt: str | None = None
+        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
         self.called = True
