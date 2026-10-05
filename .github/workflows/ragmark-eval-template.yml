@@ -101,6 +101,35 @@ jobs:
         id: compare
         run: |
           rageval compare ${{ needs.evaluate-pr.outputs.results-path }} ${{ needs.evaluate-main.outputs.results-path }} --output ./comparison.md
+
+      # Optional: Add quality gate evaluation to fail the PR if metrics regress beyond thresholds.
+      # Uncomment the following steps to enable hard gating (requires a gate config).
+      #
+      # Example gate config (gate_config.yaml):
+      #   min_score:
+      #     faithfulness: 0.8
+      #   max_regression:
+      #     precision_at_5: 0.05
+      #
+      # To use:
+      # 1. Create a gate config file (e.g., gate_config.yaml) in your repository.
+      # 2. Uncomment the steps below and adjust the paths as needed.
+      #
+      # - name: Evaluate quality gates
+      #   id: gate
+      #   run: |
+      #     rageval gate ${{ needs.evaluate-pr.outputs.results-path }} ${{ needs.evaluate-main.outputs.results-path }} \
+      #       --gate-config gate_config.yaml \
+      #       --output ./gate_results.md
+      # - name: Post gate results comment
+      #   uses: marocchino/sticky-pull-request-comment=v2
+      #   with:
+      #     path: ./gate_results.md
+      #     header: "ragmark-eval-gates"
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #
+      # Note: The gate step will fail the job (and thus the PR) if any gate rule fails.
+
       - name: Post comment
         uses: marocchino/sticky-pull-request-comment=v2
         with:

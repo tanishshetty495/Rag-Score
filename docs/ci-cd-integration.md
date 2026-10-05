@@ -69,6 +69,23 @@ The comment will appear as follows:
 - No emoji indicates a negligible change (within ±threshold).
 - N/A appears if a metric is present in only one of the result files.
 
+## Quality Gates
+
+In addition to the informational comparison, you can add a quality gate step that fails the pull request if metrics regress beyond defined thresholds.
+
+To add a quality gate step, uncomment the relevant steps in the workflow template (see the template for instructions) and provide a gate configuration.
+
+Example gate config (`gate_config.yaml`):
+
+```yaml
+min_score:
+  faithfulness: 0.8
+max_regression:
+  precision_at_5: 0.05
+```
+
+The `rageval gate` command compares the PR results against the main branch results and exits with a non-zero code if any rule fails, thereby failing the workflow and the pull request.
+
 ## Customizing the Threshold
 
 You can adjust the threshold for what counts as an improvement or regression by using the `--threshold` flag in the `rageval compare` step:

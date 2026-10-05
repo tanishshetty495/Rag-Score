@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## [0.11.0] - 2026-10-05
+### Added
+- New CLI command: `rageval gate <results.json> --baseline <baseline.json>` to enforce quality gates in CI/CD pipelines.
+  - Supports inline flags: `--min-score <metric>=<value>` and `--max-regression <metric>=<value>` (repeatable).
+  - Supports `--gate-config <path>` for JSON/YAML config files containing min_score and max_regression dictionaries.
+  - Inline flags override the config file if both are provided for the same metric.
+  - Outputs a markdown table showing each rule, current value, threshold, and PASS/FAIL status.
+  - Exit code 0 if all gates pass, 1 if any gate fails.
+  - A metric referenced in a gate rule but absent from the results file fails that rule with a clear message.
+  - No rules configured results in exit 0 with an explicit message.
+- Updated the Feature 3 CI workflow template (`.github/workflows/ragmark-eval-template.yml`) to add an optional `rageval gate` step after the existing compare step, clearly marked as commented-out/opt-in with inline instructions.
+- Added documentation for quality gates in README.md and expanded the CI/CD integration guide (docs/ci-cd-integration.md) with a quality gates subsection.
+
+### Updated
+- Bumped version to 0.11.0.
+
 ## [0.9.0]
 
 ### Added
