@@ -316,6 +316,33 @@ Each generated test case is tagged with its query type in the `metadata` field f
 
 See [CI/CD integration guide](docs/ci-cd-integration.md) for instructions on setting up automated evaluation in your GitHub Actions workflow.
 
+## Quality Gates
+
+Use `rageval gate` to fail a build when metrics regress beyond defined thresholds, enabling automated quality control in CI/CD pipelines.
+
+Example usage:
+
+```bash
+rageval gate current_results.json baseline_results.json \
+  --min-score faithfulness=0.8 \
+  --max-regression precision_at_5=0.05
+```
+
+Or with a gate config file (`gate_config.yaml`):
+
+```yaml
+min_score:
+  faithfulness: 0.8
+max_regression:
+  precision_at_5: 0.05
+```
+
+```bash
+rageval gate current_results.json baseline_results.json --gate-config gate_config.yaml
+```
+
+The command outputs a markdown table showing each rule, current value, threshold, and PASS/FAIL status. Exit code 0 if all gates pass, 1 if any gate fails.
+
 ## Judge response caching (v0.5)
 
 Enable caching to avoid re-paying for identical LLM judge calls when re-running evaluations on unchanged test cases. Add a `cache` section to your judge configuration:

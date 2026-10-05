@@ -27,6 +27,11 @@ from typing import Any
 
 import click
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
 from rag_score.adapters.base import (
     CallableGeneratorAdapter,
     CallableRetrieverAdapter,
@@ -672,6 +677,161 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
             raise click.ClickException(f"Failed to write output file: {e}") from None
     else:
         click.echo(table)
+
+
+@cli.command()
+@click.argument("results_path", type=click.Path(exists=True))
+@click.argument("baseline_path", type=click.Path(exists=True))
+@click.option("--min-score", multiple=True, type=str, help="Minimum score required for a metric (format: --min-score metric=value). Repeatable.")
+@click.option("--max-regression", multiple=True, type=str, help="Maximum allowed regression for a metric (format: --max-regression metric=value). Repeatable.")
+@click.option("--gate-config", type=click.Path(exists=True), help="Path to a JSON or YAML file containing gate configuration.")
+@click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
+def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_regression: tuple[str, ...], gate_config: str | None, output: str | None) -> None:
+    """Evaluate quality gates: fail the build if metrics regress past defined thresholds.
+
+    RESULTS_PATH: JSON file containing the current run's results (same format as `rageval run --output`).
+    BASELINE_PATH: JSON file containing the baseline run's results to compare against.
+
+    Gate rules can be specified via inline flags (--min-score, --max-regression) or a config file.
+    Inline flags override the config file if both are provided for the same metric.
+    Exit code 0 if all gates pass, 1 if any gate fails.
+    """
+    # Ensure stdout can handle UTF-8 (e.g., emojis) on Windows consoles
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+
+    # Load the results files
+    try:
+        with open(results_path, "r", encoding="utf-8") as f:
+            results_data = json.load(f)
+        with open(baseline_path, "r", encoding="utf-8") as f:
+            baseline_data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise click.ClickException(f"Failed to read or parse JSON file: {e}") from None
+
+    # Validate the expected structure
+    for label, data in [("results", results_path), ("baseline", baseline_path)]:
+        data_dict = results_data if label == "results" else baseline_data
+        if not isinstance(data_dict, dict):
+            raise click.ClickException(f"{label.capitalize()} file does not contain a JSON object.")
+        if "summary" not in data_dict or not isinstance(data_dict["summary"], dict):
+            raise click.ClickException(f"{label.capitalize()} file is missing or has invalid 'summary' field.")
+
+    results_summary = results_data["summary"]
+    baseline_summary = baseline_data["summary"]
+
+    # Parse gate configuration from file and inline flags
+    gate_rules = {"min_score": {}, "max_regression": {}}
+
+    # Load gate config file if provided
+    if gate_config:
+        # Build tuple of exceptions to catch
+        exc_types = (json.JSONDecodeError, click.ClickException)
+        if yaml is not None:
+            exc_types = exc_types + (yaml.YAMLError,)
+        try:
+            config_data = _load_config(gate_config)
+            if not isinstance(config_data, dict):
+                raise click.ClickException("Gate config file must contain a JSON object.")
+            # Extract min_score and max_regression sections if present
+            if "min_score" in config_data and isinstance(config_data["min_score"], dict):
+                gate_rules["min_score"].update(config_data["min_score"])
+            if "max_regression" in config_data and isinstance(config_data["max_regression"], dict):
+                gate_rules["max_regression"].update(config_data["max_regression"])
+        except exc_types as e:
+            if isinstance(e, click.ClickException):
+                raise
+            elif isinstance(e, json.JSONDecodeError):
+                raise click.ClickException(f"Failed to parse gate config file (invalid JSON): {e}") from None
+            elif yaml is not None and isinstance(e, yaml.YAMLError):
+                raise click.ClickException(f"Failed to parse gate config file (invalid YAML): {e}") from None
+
+    # Process inline flags (they override the config file)
+    for item in min_score:
+        try:
+            metric, value_str = item.split("=", 1)
+            value = float(value_str)
+            gate_rules["min_score"][metric] = value
+        except ValueError:
+            raise click.ClickException(f"Invalid --min-score format: '{item}'. Expected format: metric=value")
+    for item in max_regression:
+        try:
+            metric, value_str = item.split("=", 1)
+            value = float(value_str)
+            gate_rules["max_regression"][metric] = value
+        except ValueError:
+            raise click.ClickException(f"Invalid --max-regression format: '{item}'. Expected format: metric=value")
+
+    # If no rules configured, exit with message
+    if not gate_rules["min_score"] and not gate_rules["max_regression"]:
+        click.echo("No quality gates configured. Exiting with status 0.")
+        if output:
+            Path(output).write_text("No quality gates configured.\n", encoding="utf-8")
+        return  # exit code 0 implicitly
+
+    # Prepare table rows
+    rows = []
+    all_passed = True
+
+    # Helper to add a row
+    def add_row(metric: str, rule_type: str, rule_value: float, current_val: float | None, baseline_val: float | None, passed: bool):
+        nonlocal all_passed
+        if not passed:
+            all_passed = False
+        # Format values
+        current_str = f"{current_val:.3f}" if current_val is not None else "N/A"
+        if rule_type == "min_score":
+            threshold_str = f">= {rule_value:.3f}"
+        else:  # max_regression
+            threshold_str = f"<= {rule_value:.3f} (baseline - current)"
+        # For max_regression, we show the baseline value as reference
+        baseline_str = f"{baseline_val:.3f}" if baseline_val is not None else "N/A"
+        rows.append((metric, rule_type, current_str, threshold_str, baseline_str, "PASS" if passed else "FAIL"))
+
+    # Evaluate min_score rules
+    for metric, threshold in gate_rules["min_score"].items():
+        current_val = results_summary.get(metric)
+        if current_val is None:
+            add_row(metric, "min_score", threshold, None, None, False)
+        else:
+            passed = current_val >= threshold
+            add_row(metric, "min_score", threshold, current_val, None, passed)
+
+    # Evaluate max_regression rules
+    for metric, max_reg in gate_rules["max_regression"].items():
+        current_val = results_summary.get(metric)
+        baseline_val = baseline_summary.get(metric)
+        if current_val is None or baseline_val is None:
+            add_row(metric, "max_regression", max_reg, current_val, baseline_val, False)
+        else:
+            regression = baseline_val - current_val  # positive if current is worse
+            passed = regression <= max_reg  # regression must be <= max allowed
+            add_row(metric, "max_regression", max_reg, current_val, baseline_val, passed)
+
+    # Build markdown table
+    lines = [
+        "| Metric | Rule | Current Value | Threshold | Baseline Value | Pass/Fail |",
+        "|---|---|---|---|---|---|",
+    ]
+    for metric, rule, current_str, threshold_str, baseline_str, result in rows:
+        lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {result} |")
+
+    table = "\n".join(lines)
+
+    if output:
+        try:
+            Path(output).write_text(table + "\n", encoding="utf-8")
+            click.echo(f"Gate evaluation table written to {output}")
+        except OSError as e:
+            raise click.ClickException(f"Failed to write output file: {e}") from None
+    else:
+        click.echo(table)
+
+    # Exit with appropriate code (Click will convert return value to exit code)
+    # We need to return 2 if any gate failed, 0 if all passed
+    if not all_passed:
+        return 2
+    return 0
 
 
 def main() -> None:
