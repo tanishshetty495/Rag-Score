@@ -37,9 +37,7 @@ class LlamaIndexRetrieverAdapter(RetrieverAdapter):
             ) from e
 
         if not isinstance(retriever, BaseRetriever):
-            raise TypeError(
-                f"Expected a llama_index BaseRetriever, got {type(retriever).__name__}"
-            )
+            raise TypeError(f"Expected a llama_index BaseRetriever, got {type(retriever).__name__}")
         self._retriever = retriever
 
     async def retrieve(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:

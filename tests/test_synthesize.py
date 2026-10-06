@@ -136,9 +136,7 @@ class TestSynthesizeTestSet:
     async def test_questions_per_chunk_multiplies_output(self):
         judge = _FakeSynthesisJudge()
         documents = {"doc1": "a single short chunk of text"}
-        report = await synthesize_test_set(
-            documents, judge, chunk_size=100, questions_per_chunk=3
-        )
+        report = await synthesize_test_set(documents, judge, chunk_size=100, questions_per_chunk=3)
         assert len(report.test_cases) == 3
 
     async def test_empty_documents_produces_empty_report(self):
@@ -166,7 +164,9 @@ class TestSynthesizeTestSet:
 
         # Test with query_types=None (the default)
         judge_none = _FakeSynthesisJudge()
-        report_none = await synthesize_test_set(documents, judge_none, chunk_size=30, chunk_overlap=5)
+        report_none = await synthesize_test_set(
+            documents, judge_none, chunk_size=30, chunk_overlap=5
+        )
 
         # Test with explicit query_types=["standard"]
         judge_standard = _FakeSynthesisJudge()
@@ -181,7 +181,11 @@ class TestSynthesizeTestSet:
             assert tc_none.question == tc_standard.question
             assert tc_none.ground_truth_answer == tc_standard.ground_truth_answer
             assert tc_none.expected_doc_ids == tc_standard.expected_doc_ids
-            assert tc_none.metadata.get("query_type") == tc_standard.metadata.get("query_type") == "standard"
+            assert (
+                tc_none.metadata.get("query_type")
+                == tc_standard.metadata.get("query_type")
+                == "standard"
+            )
 
     async def test_standard_query_type_explicit(self):
         """Explicit 'standard' query type works."""
@@ -225,7 +229,9 @@ class TestSynthesizeTestSet:
         # Unanswerable questions should have empty expected_doc_ids
         for tc in report.test_cases:
             assert tc.expected_doc_ids == []
-            assert tc.ground_truth_answer == "This question cannot be answered from the given context."
+            assert (
+                tc.ground_truth_answer == "This question cannot be answered from the given context."
+            )
 
     async def test_multi_hop_query_type(self):
         """Multi-hop query type generates questions requiring two chunks."""
@@ -258,19 +264,13 @@ class TestSynthesizeTestSet:
         documents = {"doc1": "test content"}
 
         with pytest.raises(ValueError, match="Unknown query type"):
-            await synthesize_test_set(
-                documents, judge, query_types=["invalid_type"]
-            )
+            await synthesize_test_set(documents, judge, query_types=["invalid_type"])
 
         with pytest.raises(ValueError, match="Unknown query type"):
-            await synthesize_test_set(
-                documents, judge, query_types=["standard", "invalid_type"]
-            )
+            await synthesize_test_set(documents, judge, query_types=["standard", "invalid_type"])
 
         with pytest.raises(ValueError, match="Valid options are"):
-            await synthesize_test_set(
-                documents, judge, query_types=["invalid_type"]
-            )
+            await synthesize_test_set(documents, judge, query_types=["invalid_type"])
 
     async def test_multiple_query_types(self):
         """Multiple query types should generate the right mix."""
@@ -284,7 +284,7 @@ class TestSynthesizeTestSet:
             chunk_size=30,
             chunk_overlap=5,
             questions_per_chunk=2,
-            query_types=["standard", "adversarial"]
+            query_types=["standard", "adversarial"],
         )
 
         # Should have 2 query types × 2 questions_per_chunk × number of chunks
@@ -294,8 +294,12 @@ class TestSynthesizeTestSet:
         assert len(report.test_cases) == expected_count
 
         # Check distribution
-        standard_count = sum(1 for tc in report.test_cases if tc.metadata.get("query_type") == "standard")
-        adversarial_count = sum(1 for tc in report.test_cases if tc.metadata.get("query_type") == "adversarial")
+        standard_count = sum(
+            1 for tc in report.test_cases if tc.metadata.get("query_type") == "standard"
+        )
+        adversarial_count = sum(
+            1 for tc in report.test_cases if tc.metadata.get("query_type") == "adversarial"
+        )
 
         assert standard_count == expected_count // 2
         assert adversarial_count == expected_count // 2

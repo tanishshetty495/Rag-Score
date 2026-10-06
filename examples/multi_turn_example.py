@@ -31,9 +31,7 @@ from rag_score.metrics.generation.context_carry_over import ContextCarryOver
 class FakeRetriever(RetrieverAdapter):
     """Returns the same two chunks regardless of query."""
 
-    async def retrieve(
-        self, query: str, top_k: int = 5
-    ) -> list[RetrievedChunk]:
+    async def retrieve(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
         # Ignore query and top_k for simplicity
         return [
             RetrievedChunk(
@@ -50,6 +48,7 @@ class FakeRetriever(RetrieverAdapter):
 @dataclass
 class FakeGeneratorOptions:
     """Options to control the fake generator's behavior for demonstration."""
+
     # If True, the generator will use the history to resolve references.
     use_history: bool = True
     # If True, the generator will produce an answer that correctly resolves references.
@@ -106,10 +105,17 @@ class FakeJudge(LLMJudge):
         # For demonstration, we look for keywords in the user_prompt to decide the score.
         # In a real judge, this would be an LLM call.
         if "Pixel 8 has a 6.2-inch display" in user_prompt:
-            return '{"score": 1.0, "reasoning": "Correctly resolved \'the second one\' to Pixel 8."}'
+            return (
+                '{"score": 1.0, "reasoning": "Correctly resolved \'the second one\' to Pixel 8."}'
+            )
         if "iPhone 15 features a 6.1-inch display" in user_prompt:
-            return '{"score": 1.0, "reasoning": "Correctly resolved \'the first one\' to iPhone 15."}'
-        if "I cannot compare phones" in user_prompt or "don't have enough information" in user_prompt:
+            return (
+                '{"score": 1.0, "reasoning": "Correctly resolved \'the first one\' to iPhone 15."}'
+            )
+        if (
+            "I cannot compare phones" in user_prompt
+            or "don't have enough information" in user_prompt
+        ):
             return '{"score": 0.0, "reasoning": "Failed to resolve references from conversation history."}'
         # Default partial credit
         return '{"score": 0.5, "reasoning": "Partially resolved references."}'
@@ -118,6 +124,7 @@ class FakeJudge(LLMJudge):
 # ---------------------------------------------------------------------------
 # Test cases with conversation history
 # ---------------------------------------------------------------------------
+
 
 def get_multi_turn_test_cases() -> list[TestCase]:
     """Return a list of multi-turn test cases."""
@@ -168,6 +175,7 @@ def get_multi_turn_test_cases() -> list[TestCase]:
 # Run the evaluation
 # ---------------------------------------------------------------------------
 
+
 async def main() -> None:
     test_cases = get_multi_turn_test_cases()
     retriever = FakeRetriever()
@@ -184,13 +192,11 @@ async def main() -> None:
     )
 
     print("Running multi-turn evaluation with ContextCarryOver metric...")
-    report = await run_evaluation(
-        test_cases, retriever, generator, metrics, config
-    )
+    report = await run_evaluation(test_cases, retriever, generator, metrics, config)
 
     print(f"\nEvaluated {len(test_cases)} test cases.")
     for i, result in enumerate(report.results):
-        print(f"\nTest case {i+1}: {result.test_case_id}")
+        print(f"\nTest case {i + 1}: {result.test_case_id}")
         print(f"  Question: {test_cases[i].question}")
         print(f"  Generated answer: {result.generated_answer}")
         if result.error:

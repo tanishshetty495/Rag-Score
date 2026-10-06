@@ -91,9 +91,7 @@ async def _run_single(
 
             t1 = time.perf_counter()
             if opts_in_history and history is not None:
-                answer = await generator.generate(
-                    test_case.question, context, history=history
-                )
+                answer = await generator.generate(test_case.question, context, history=history)
             else:
                 answer = await generator.generate(test_case.question, context)
             result.generation_latency_ms = (time.perf_counter() - t1) * 1000
@@ -114,7 +112,9 @@ async def _run_single(
                 completion_tokens = count_tokens(answer, model_name)
                 result.total_tokens = prompt_tokens + completion_tokens
                 result.estimated_cost_usd = estimate_cost(
-                    prompt_tokens, completion_tokens, model_name,
+                    prompt_tokens,
+                    completion_tokens,
+                    model_name,
                     pricing=config.telemetry.pricing,
                 )
 
@@ -187,10 +187,7 @@ async def run_evaluation(
 
     tc_by_id = {tc.test_case_id: tc for tc in test_cases}
     scored_lists = await asyncio.gather(
-        *(
-            _score_result(tc_by_id[r.test_case_id], r, metrics)
-            for r in eval_results
-        )
+        *(_score_result(tc_by_id[r.test_case_id], r, metrics) for r in eval_results)
     )
     all_scores = [s for sublist in scored_lists for s in sublist]
 

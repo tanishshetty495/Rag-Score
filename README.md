@@ -29,9 +29,11 @@ pip install ragmark
 # my_pipeline.py
 from rag_score.core.types import RetrievedChunk
 
+
 async def my_retriever(query: str, top_k: int):
     # call your actual retriever here — FAISS, Pinecone, whatever
     return [RetrievedChunk(doc_id="doc_1", text="...")]
+
 
 async def my_generator(query: str, context: list[RetrievedChunk]):
     # call your actual LLM here
@@ -182,12 +184,20 @@ Already using LangChain or LlamaIndex? Wrap your existing retriever/chain instea
 
 ```python
 # LangChain
-from rag_score.adapters.langchain_adapter import LangChainRetrieverAdapter, LangChainGeneratorAdapter
+from rag_score.adapters.langchain_adapter import (
+    LangChainRetrieverAdapter,
+    LangChainGeneratorAdapter,
+)
+
 retriever = LangChainRetrieverAdapter(my_vectorstore.as_retriever())
 generator = LangChainGeneratorAdapter(my_lcel_chain)
 
 # LlamaIndex
-from rag_score.adapters.llamaindex_adapter import LlamaIndexRetrieverAdapter, LlamaIndexGeneratorAdapter
+from rag_score.adapters.llamaindex_adapter import (
+    LlamaIndexRetrieverAdapter,
+    LlamaIndexGeneratorAdapter,
+)
+
 retriever = LlamaIndexRetrieverAdapter(my_index.as_retriever())
 generator = LlamaIndexGeneratorAdapter(my_index.as_query_engine())  # or a bare LLM
 ```
@@ -206,6 +216,7 @@ Or in Python:
 
 ```python
 from rag_score.judges.local_judge import LocalJudge
+
 judge = LocalJudge(model="llama3.1")  # defaults to http://localhost:11434/v1 (Ollama)
 ```
 
@@ -239,6 +250,7 @@ Evaluating a multi-step agent (one that calls tools before answering) instead of
 ```python
 # my_agent.py
 from rag_score.agentic.types import ToolCall
+
 
 async def my_agent(query: str) -> tuple[list[ToolCall], str]:
     # call your actual agent here - LangGraph, a custom loop, whatever

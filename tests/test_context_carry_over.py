@@ -230,6 +230,7 @@ async def test_context_carry_over_returns_zero_when_no_generated_answer():
 
 async def test_runner_passes_history_to_opt_in_generator():
     """The runner passes history to a generator that declares a `history` kwarg."""
+
     class OptInGenerator(GeneratorAdapter):
         def __init__(self):
             self.received_history = None
@@ -273,6 +274,7 @@ async def test_runner_passes_history_to_opt_in_generator():
 
 async def test_runner_does_not_pass_history_to_legacy_generator():
     """The runner does not pass history to a generator that lacks a `history` kwarg."""
+
     class LegacyGenerator(GeneratorAdapter):
         def __init__(self):
             self.call_count = 0
@@ -316,6 +318,7 @@ async def test_runner_does_not_pass_history_to_legacy_generator():
 
 async def test_runner_does_not_pass_history_when_test_case_lacks_history():
     """The runner does not pass history to an opt-in generator when the test case has no history."""
+
     class OptInGenerator(GeneratorAdapter):
         def __init__(self):
             self.received_history = None

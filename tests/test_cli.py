@@ -49,12 +49,15 @@ class TestRunCommand:
         with runner.isolated_filesystem():
             _write_demo_pipeline(runner)
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "test_set.json",
-                    "retriever": "demo_pipeline:my_retriever",
-                    "generator": "demo_pipeline:my_generator",
-                    "metrics": ["not_a_real_metric"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "test_set.json",
+                        "retriever": "demo_pipeline:my_retriever",
+                        "generator": "demo_pipeline:my_generator",
+                        "metrics": ["not_a_real_metric"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run", "config.json"])
             assert result.exit_code != 0
             assert "Unknown metric" in result.output
@@ -64,12 +67,15 @@ class TestRunCommand:
         with runner.isolated_filesystem():
             _write_demo_pipeline(runner)
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "test_set.json",
-                    "retriever": "demo_pipeline:my_retriever",
-                    "generator": "demo_pipeline:my_generator",
-                    "metrics": ["faithfulness"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "test_set.json",
+                        "retriever": "demo_pipeline:my_retriever",
+                        "generator": "demo_pipeline:my_generator",
+                        "metrics": ["faithfulness"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run", "config.json"])
             assert result.exit_code != 0
             assert "requires an LLM judge" in result.output
@@ -105,12 +111,15 @@ class TestRunCommand:
         with runner.isolated_filesystem():
             _write_demo_pipeline(runner)
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "test_set.json",
-                    "retriever": "demo_pipeline:my_retriever",
-                    "generator": "demo_pipeline:my_generator",
-                    "metrics": ["local_faithfulness"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "test_set.json",
+                        "retriever": "demo_pipeline:my_retriever",
+                        "generator": "demo_pipeline:my_generator",
+                        "metrics": ["local_faithfulness"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run", "config.json"])
             assert result.exit_code != 0
             assert "Evaluation failed" in result.output
@@ -121,13 +130,16 @@ class TestRunCommand:
         with runner.isolated_filesystem():
             _write_demo_pipeline(runner)
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "test_set.json",
-                    "retriever": "demo_pipeline:my_retriever",
-                    "generator": "demo_pipeline:my_generator",
-                    "metrics": ["faithfulness"],
-                    "judge": {"provider": "not_a_real_provider"},
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "test_set.json",
+                        "retriever": "demo_pipeline:my_retriever",
+                        "generator": "demo_pipeline:my_generator",
+                        "metrics": ["faithfulness"],
+                        "judge": {"provider": "not_a_real_provider"},
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run", "config.json"])
             assert result.exit_code != 0
             assert "Unknown judge provider" in result.output
@@ -138,6 +150,7 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("some content")
@@ -149,6 +162,7 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("empty_docs")
             result = runner.invoke(
                 cli, ["synthesize", "empty_docs", "--judge", '{"provider": "local", "model": "x"}']
@@ -163,15 +177,23 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write(" ".join(f"word{i}" for i in range(100)))
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--chunk-size", "50",
-                "--chunk-overlap", "50",
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--chunk-size",
+                    "50",
+                    "--chunk-overlap",
+                    "50",
+                ],
+            )
             assert result.exit_code != 0
             assert "overlap must be smaller than chunk_size" in result.output
             assert "Traceback" not in result.output
@@ -181,6 +203,7 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("some test content")
@@ -188,15 +211,23 @@ class TestSynthesizeCommand:
             # Test without --query-types flag (should default to standard)
             # Note: We expect this to fail due to missing local judge server,
             # but it should get past parameter parsing and into synthesis
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--output", "test_set.json"
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--output",
+                    "test_set.json",
+                ],
+            )
             # Should fail due to judge connection issues, not parameter issues
             assert result.exit_code != 0
-            assert "Error: Synthesis produced zero test cases" in result.output or \
-                   "Error: Unknown judge provider" not in result.output  # If it got past judge parsing
+            assert (
+                "Error: Synthesis produced zero test cases" in result.output
+                or "Error: Unknown judge provider" not in result.output
+            )  # If it got past judge parsing
 
             # More importantly, check that it didn't fail on parameter parsing
             assert "Invalid value for '--query-types'" not in result.output
@@ -207,16 +238,24 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("some test content for testing")
 
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--query-types", "standard,adversarial",
-                "--output", "test_set.json"
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--query-types",
+                    "standard,adversarial",
+                    "--output",
+                    "test_set.json",
+                ],
+            )
             # Should fail due to judge connection issues, not parameter issues
             assert result.exit_code != 0
             # Check that it didn't fail on parameter parsing
@@ -232,16 +271,24 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("some test content")
 
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--query-types", "standard,invalid_type",
-                "--output", "test_set.json"
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--query-types",
+                    "standard,invalid_type",
+                    "--output",
+                    "test_set.json",
+                ],
+            )
             assert result.exit_code != 0
             assert "Unknown query type" in result.output
             # Check that we get the valid options in the error message (order may vary)
@@ -256,17 +303,26 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("short")  # Too short for even one chunk with default size
 
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--query-types", "multi_hop",
-                "--chunk-size", "10",
-                "--output", "test_set.json"
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--query-types",
+                    "multi_hop",
+                    "--chunk-size",
+                    "10",
+                    "--output",
+                    "test_set.json",
+                ],
+            )
             # Should fail due to judge connection issues, not parameter issues
             assert result.exit_code != 0
             # Check that it didn't fail on parameter parsing
@@ -281,16 +337,24 @@ class TestSynthesizeCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             os.makedirs("docs")
             with open("docs/doc1.txt", "w") as f:
                 f.write("This is a test document with some content for testing.")
 
-            result = runner.invoke(cli, [
-                "synthesize", "docs",
-                "--judge", '{"provider": "local", "model": "llama3.1"}',
-                "--query-types", "unanswerable",
-                "--output", "test_set.json"
-            ])
+            result = runner.invoke(
+                cli,
+                [
+                    "synthesize",
+                    "docs",
+                    "--judge",
+                    '{"provider": "local", "model": "llama3.1"}',
+                    "--query-types",
+                    "unanswerable",
+                    "--output",
+                    "test_set.json",
+                ],
+            )
             # Should fail due to judge connection issues, not parameter issues
             assert result.exit_code != 0
             # Check that it didn't fail on parameter parsing
@@ -318,11 +382,18 @@ class TestRunTrajectoryCommand:
         with runner.isolated_filesystem():
             _write_demo_agent()
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "trajectory_test_set.json",
-                    "agent": "demo_agent:my_agent",
-                    "metrics": ["tool_selection_recall", "tool_selection_precision", "tool_call_order_correctness"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "trajectory_test_set.json",
+                        "agent": "demo_agent:my_agent",
+                        "metrics": [
+                            "tool_selection_recall",
+                            "tool_selection_precision",
+                            "tool_call_order_correctness",
+                        ],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code == 0
             assert "tool_selection_recall" in result.output
@@ -333,7 +404,9 @@ class TestRunTrajectoryCommand:
         with runner.isolated_filesystem():
             _write_demo_agent()
             with open("config.json", "w") as f:
-                json.dump({"dataset": "trajectory_test_set.json", "metrics": ["tool_selection_recall"]}, f)
+                json.dump(
+                    {"dataset": "trajectory_test_set.json", "metrics": ["tool_selection_recall"]}, f
+                )
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code != 0
             assert "missing required field" in result.output
@@ -344,11 +417,14 @@ class TestRunTrajectoryCommand:
         with runner.isolated_filesystem():
             _write_demo_agent()
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "trajectory_test_set.json",
-                    "agent": "demo_agent:my_agent",
-                    "metrics": ["not_a_real_metric"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "trajectory_test_set.json",
+                        "agent": "demo_agent:my_agent",
+                        "metrics": ["not_a_real_metric"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code != 0
             assert "Unknown trajectory metric" in result.output
@@ -357,14 +433,18 @@ class TestRunTrajectoryCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             import os
+
             _write_demo_agent()
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "trajectory_test_set.json",
-                    "agent": "demo_agent:my_agent",
-                    "metrics": ["tool_selection_recall"],
-                    "output": "results.json",
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "trajectory_test_set.json",
+                        "agent": "demo_agent:my_agent",
+                        "metrics": ["tool_selection_recall"],
+                        "output": "results.json",
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code == 0
             assert os.path.exists("results.json")
@@ -384,12 +464,15 @@ class TestProgressBar:
         with runner.isolated_filesystem():
             _write_demo_pipeline(runner)
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "test_set.json",
-                    "retriever": "demo_pipeline:my_retriever",
-                    "generator": "demo_pipeline:my_generator",
-                    "metrics": ["precision_at_5"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "test_set.json",
+                        "retriever": "demo_pipeline:my_retriever",
+                        "generator": "demo_pipeline:my_generator",
+                        "metrics": ["precision_at_5"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run", "config.json"])
             assert result.exit_code == 0
             assert "precision_at_5" in result.output
@@ -399,11 +482,14 @@ class TestProgressBar:
         with runner.isolated_filesystem():
             _write_demo_agent()
             with open("config.json", "w") as f:
-                json.dump({
-                    "dataset": "trajectory_test_set.json",
-                    "agent": "demo_agent:my_agent",
-                    "metrics": ["tool_selection_recall"],
-                }, f)
+                json.dump(
+                    {
+                        "dataset": "trajectory_test_set.json",
+                        "agent": "demo_agent:my_agent",
+                        "metrics": ["tool_selection_recall"],
+                    },
+                    f,
+                )
             result = runner.invoke(cli, ["run-trajectory", "config.json"])
             assert result.exit_code == 0
             assert "tool_selection_recall" in result.output
@@ -428,7 +514,9 @@ class TestCompareCommand:
         with runner.isolated_filesystem():
             # Write two result files with different summaries
             self._write_result_file(runner, "a.json", {"precision_at_5": 0.8, "faithfulness": 0.9})
-            self._write_result_file(runner, "b.json", {"precision_at_5": 0.85, "faithfulness": 0.85})
+            self._write_result_file(
+                runner, "b.json", {"precision_at_5": 0.85, "faithfulness": 0.85}
+            )
             result = runner.invoke(cli, ["compare", "a.json", "b.json"])
             assert result.exit_code == 0
             # Check the output table
@@ -454,10 +542,13 @@ class TestCompareCommand:
         with runner.isolated_filesystem():
             self._write_result_file(runner, "a.json", {"precision_at_5": 0.8})
             self._write_result_file(runner, "b.json", {"precision_at_5": 0.9})
-            result = runner.invoke(cli, ["compare", "a.json", "b.json", "--output", "comparison.md"])
+            result = runner.invoke(
+                cli, ["compare", "a.json", "b.json", "--output", "comparison.md"]
+            )
             assert result.exit_code == 0
             assert "Comparison table written to comparison.md" in result.output
             import os
+
             assert os.path.exists("comparison.md")
             with open("comparison.md", "r", encoding="utf-8") as f:
                 content = f.read()
@@ -468,7 +559,9 @@ class TestCompareCommand:
         runner = CliRunner()
         with runner.isolated_filesystem():
             self._write_result_file(runner, "a.json", {"precision_at_5": 0.8})
-            self._write_result_file(runner, "b.json", {"precision_at_5": 0.81})  # delta 0.01, within threshold
+            self._write_result_file(
+                runner, "b.json", {"precision_at_5": 0.81}
+            )  # delta 0.01, within threshold
             result = runner.invoke(cli, ["compare", "a.json", "b.json", "--threshold", "0.02"])
             assert result.exit_code == 0
             # Should show delta without emoji

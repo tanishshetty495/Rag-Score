@@ -2,13 +2,13 @@
 """A simple HTTP server that mimics an OpenAI-compatible endpoint for judging."""
 
 import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 
 class JudgeHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/v1/chat/completions":
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
             # We don't parse the request, just return a fixed verdict
             response = {
@@ -21,16 +21,12 @@ class JudgeHandler(BaseHTTPRequestHandler):
                         "index": 0,
                         "message": {
                             "role": "assistant",
-                            "content": '{"score": 0.8, "reasoning": "This is a fixed response for demonstration."}'
+                            "content": '{"score": 0.8, "reasoning": "This is a fixed response for demonstration."}',
                         },
-                        "finish_reason": "stop"
+                        "finish_reason": "stop",
                     }
                 ],
-                "usage": {
-                    "prompt_tokens": 10,
-                    "completion_tokens": 5,
-                    "total_tokens": 15
-                }
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
             }
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -44,7 +40,8 @@ class JudgeHandler(BaseHTTPRequestHandler):
         # Suppress log messages
         pass
 
+
 if __name__ == "__main__":
-    server = HTTPServer(('localhost', 8000), JudgeHandler)
+    server = HTTPServer(("localhost", 8000), JudgeHandler)
     print("Starting judge server on http://localhost:8000")
     server.serve_forever()

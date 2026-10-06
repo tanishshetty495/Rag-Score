@@ -29,9 +29,7 @@ def _score_class(value: float) -> str:
     return "score-bad"
 
 
-def _build_rows(
-    report: RunReport, test_cases: list[TestCase]
-) -> list[dict]:
+def _build_rows(report: RunReport, test_cases: list[TestCase]) -> list[dict]:
     tc_by_id = {tc.test_case_id: tc for tc in test_cases}
     scores_by_eval: dict[str, dict[str, float]] = {}
     reasoning_by_eval: dict[str, dict[str, str]] = {}
@@ -166,8 +164,7 @@ def generate_html_report(
         from jinja2 import Environment, FileSystemLoader
     except ImportError as e:
         raise ImportError(
-            "jinja2 is required for HTML reports. "
-            "Install it with: pip install rag-score[report]"
+            "jinja2 is required for HTML reports. Install it with: pip install rag-score[report]"
         ) from e
 
     env = Environment(loader=FileSystemLoader(str(_TEMPLATE_DIR)), autoescape=True)

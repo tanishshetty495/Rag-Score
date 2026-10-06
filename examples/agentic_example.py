@@ -37,7 +37,9 @@ async def my_agent(query: str) -> tuple[list[ToolCall], str]:
 
     if "weather" in query_lower:
         tool_calls.append(
-            ToolCall(tool_name="search_weather", tool_input={"city": "Paris"}, tool_output="Sunny, 22C")
+            ToolCall(
+                tool_name="search_weather", tool_input={"city": "Paris"}, tool_output="Sunny, 22C"
+            )
         )
     if any(op in query_lower for op in ("+", "-", "*", "times", "percent", "%")):
         tool_calls.append(
@@ -77,9 +79,7 @@ async def main() -> None:
 
     print(f"Evaluated {len(report.results)} test cases\n")
     for result in report.results:
-        question = next(
-            tc.question for tc in test_cases if tc.test_case_id == result.test_case_id
-        )
+        question = next(tc.question for tc in test_cases if tc.test_case_id == result.test_case_id)
         tools_used = [c.tool_name for c in result.tool_calls]
         print(f"Q: {question}")
         print(f"  Tools called: {tools_used}")

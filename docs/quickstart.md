@@ -14,9 +14,11 @@ pip install ragmark
 # my_pipeline.py
 from rag_score.core.types import RetrievedChunk
 
+
 async def my_retriever(query: str, top_k: int):
     # call your actual retriever here - FAISS, Pinecone, whatever
     return [RetrievedChunk(doc_id="doc_1", text="...")]
+
 
 async def my_generator(query: str, context: list[RetrievedChunk]):
     # call your actual LLM here

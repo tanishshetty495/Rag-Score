@@ -79,7 +79,8 @@ class TestMRR:
     async def test_no_relevant_found(self, sample_test_cases):
         tc = sample_test_cases[0]
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="doc_999", text="x")],
         )
         metric = MRR()
@@ -94,7 +95,9 @@ class TestNDCG:
         score = await metric.score(tc, perfect_eval_result)
         assert score == pytest.approx(1.0)
 
-    async def test_partial_ranking_between_zero_and_one(self, sample_test_cases, sample_eval_result):
+    async def test_partial_ranking_between_zero_and_one(
+        self, sample_test_cases, sample_eval_result
+    ):
         tc = sample_test_cases[0]
         metric = NDCG(k=3)
         score = await metric.score(tc, sample_eval_result)

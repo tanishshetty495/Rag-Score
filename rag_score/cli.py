@@ -75,6 +75,7 @@ from rag_score.telemetry import TelemetryConfig
 # Config loading
 # ---------------------------------------------------------------------------
 
+
 def _load_config(path: str | Path) -> dict[str, Any]:
     path = Path(path)
     if not path.exists():
@@ -99,6 +100,7 @@ def _load_config(path: str | Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Dynamic "module:attribute" resolution for retriever/generator refs
 # ---------------------------------------------------------------------------
+
 
 def _import_from_string(ref: str):
     """Resolve 'my_module.submodule:my_function' to the actual object,
@@ -148,6 +150,7 @@ def _resolve_agent(ref: str) -> AgentAdapter:
 # ---------------------------------------------------------------------------
 # Judge construction from config: {"provider": "openai"|"anthropic"|"local", "model": ...}
 # ---------------------------------------------------------------------------
+
 
 def _build_judge(judge_config: dict[str, Any] | None) -> LLMJudge | None:
     if not judge_config:
@@ -260,7 +263,7 @@ def _build_metric(name: str, judge: LLMJudge | None, encoder_model: str | None =
         return _LOCAL_ML_METRICS[name](**kwargs)
     for prefix, cls in _K_PREFIXES.items():
         if name.startswith(prefix):
-            suffix = name[len(prefix):]
+            suffix = name[len(prefix) :]
             if not suffix.isdigit():
                 raise click.ClickException(f"Invalid metric '{name}' - expected e.g. '{prefix}5'")
             return cls(k=int(suffix))
@@ -274,6 +277,7 @@ def _build_metric(name: str, judge: LLMJudge | None, encoder_model: str | None =
 # ---------------------------------------------------------------------------
 # Summary table (terminal + $GITHUB_STEP_SUMMARY-friendly markdown)
 # ---------------------------------------------------------------------------
+
 
 def _summarize(scores: list, num_results: int, num_errors: int) -> dict[str, float]:
     by_metric: dict[str, list[float]] = {}
@@ -294,7 +298,9 @@ def _print_summary(summary: dict[str, float], num_results: int, num_errors: int)
         click.echo(f"{name.ljust(name_width)}{value:.3f}")
 
 
-def _write_github_step_summary(summary: dict[str, float], num_results: int, num_errors: int) -> None:
+def _write_github_step_summary(
+    summary: dict[str, float], num_results: int, num_errors: int
+) -> None:
     """Append a markdown table to $GITHUB_STEP_SUMMARY if running in GitHub Actions,
     so results show up directly in the workflow run UI with no extra config."""
     import os
@@ -320,6 +326,7 @@ def _write_github_step_summary(summary: dict[str, float], num_results: int, num_
 # ---------------------------------------------------------------------------
 # CLI commands
 # ---------------------------------------------------------------------------
+
 
 @click.group()
 @click.version_option(package_name="rag-score")
@@ -373,7 +380,11 @@ def run(config_path: str) -> None:
         with click.progressbar(length=len(test_cases), label="Evaluating") as bar:
             report = asyncio.run(
                 run_evaluation(
-                    test_cases, retriever, generator, metrics, run_config,
+                    test_cases,
+                    retriever,
+                    generator,
+                    metrics,
+                    run_config,
                     on_progress=lambda: bar.update(1),
                 )
             )
@@ -388,7 +399,7 @@ def run(config_path: str) -> None:
             f"If this is a local ML metric (local_faithfulness, "
             f"local_answer_relevance), the model may need to download on "
             f"first use - check your internet connection, or pre-download "
-            f"it with: python -c \"from sentence_transformers import "
+            f'it with: python -c "from sentence_transformers import '
             f"SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')\""
         ) from None
 
@@ -444,13 +455,35 @@ def run(config_path: str) -> None:
 
 @cli.command()
 @click.argument("docs_dir", type=click.Path(exists=True, file_okay=False))
-@click.option("--output", "-o", default="test_set.json", help="Where to write the generated test set.")
-@click.option("--judge", "judge_json", required=True, help='Judge config as JSON, e.g. \'{"provider": "anthropic", "model": "claude-haiku-4-5"}\'')
+@click.option(
+    "--output", "-o", default="test_set.json", help="Where to write the generated test set."
+)
+@click.option(
+    "--judge",
+    "judge_json",
+    required=True,
+    help='Judge config as JSON, e.g. \'{"provider": "anthropic", "model": "claude-haiku-4-5"}\'',
+)
 @click.option("--chunk-size", default=500, show_default=True, help="Words per chunk.")
-@click.option("--chunk-overlap", default=50, show_default=True, help="Overlapping words between consecutive chunks.")
-@click.option("--questions-per-chunk", default=1, show_default=True, help="How many questions to generate per chunk.")
+@click.option(
+    "--chunk-overlap",
+    default=50,
+    show_default=True,
+    help="Overlapping words between consecutive chunks.",
+)
+@click.option(
+    "--questions-per-chunk",
+    default=1,
+    show_default=True,
+    help="How many questions to generate per chunk.",
+)
 @click.option("--max-concurrency", default=5, show_default=True, help="Concurrent judge calls.")
-@click.option("--query-types", default="standard", show_default=True, help="Comma-separated list of query types to generate: standard, adversarial, multi_hop, unanswerable")
+@click.option(
+    "--query-types",
+    default="standard",
+    show_default=True,
+    help="Comma-separated list of query types to generate: standard, adversarial, multi_hop, unanswerable",
+)
 def synthesize(
     docs_dir: str,
     output: str,
@@ -474,14 +507,18 @@ def synthesize(
 
     judge = _build_judge(judge_config)
     if judge is None:
-        raise click.ClickException("--judge config resolved to no judge - check the provider field.")
+        raise click.ClickException(
+            "--judge config resolved to no judge - check the provider field."
+        )
 
     documents = load_documents_from_dir(docs_dir)
     if not documents:
         raise click.ClickException(f"No .txt or .md files found in {docs_dir}")
 
     click.echo(f"Loaded {len(documents)} document(s) from {docs_dir}")
-    click.echo(f"Chunking at {chunk_size} words (overlap {chunk_overlap}) and generating questions...")
+    click.echo(
+        f"Chunking at {chunk_size} words (overlap {chunk_overlap}) and generating questions..."
+    )
 
     try:
         # Parse comma-separated query types
@@ -515,7 +552,9 @@ def synthesize(
     payload = [tc.model_dump(mode="json") for tc in report.test_cases]
     Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    click.echo(f"\nGenerated {len(report.test_cases)} test case(s), {len(report.errors)} chunk(s) failed")
+    click.echo(
+        f"\nGenerated {len(report.test_cases)} test case(s), {len(report.errors)} chunk(s) failed"
+    )
     click.echo(f"Written to {output}")
     if report.errors:
         click.echo("\nFailed chunks:")
@@ -539,8 +578,7 @@ def _build_trajectory_metric(name: str) -> TrajectoryMetric:
     if name in _TRAJECTORY_METRICS:
         return _TRAJECTORY_METRICS[name]()
     raise click.ClickException(
-        f"Unknown trajectory metric '{name}'. Available: "
-        f"{', '.join(_TRAJECTORY_METRICS.keys())}"
+        f"Unknown trajectory metric '{name}'. Available: {', '.join(_TRAJECTORY_METRICS.keys())}"
     )
 
 
@@ -583,7 +621,10 @@ def run_trajectory(config_path: str) -> None:
         with click.progressbar(length=len(test_cases), label="Evaluating") as bar:
             report = asyncio.run(
                 run_trajectory_evaluation(
-                    test_cases, agent, metrics, run_config,
+                    test_cases,
+                    agent,
+                    metrics,
+                    run_config,
                     on_progress=lambda: bar.update(1),
                 )
             )
@@ -610,14 +651,33 @@ def run_trajectory(config_path: str) -> None:
 @cli.command()
 @click.argument("results_a_path", type=click.Path(exists=True))
 @click.argument("results_b_path", type=click.Path(exists=True))
-@click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
-@click.option("--threshold", "-t", default=0.02, show_default=True, help="Threshold for considering a change as improvement/regression.")
-@click.option("--with-significance/--no-with-significance", default=False, show_default=True, help="Include statistical significance testing in comparison.")
-def compare(results_a_path: str, results_b_path: str, output: str | None, threshold: float, with_significance: bool) -> None:
+@click.option(
+    "--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout."
+)
+@click.option(
+    "--threshold",
+    "-t",
+    default=0.02,
+    show_default=True,
+    help="Threshold for considering a change as improvement/regression.",
+)
+@click.option(
+    "--with-significance/--no-with-significance",
+    default=False,
+    show_default=True,
+    help="Include statistical significance testing in comparison.",
+)
+def compare(
+    results_a_path: str,
+    results_b_path: str,
+    output: str | None,
+    threshold: float,
+    with_significance: bool,
+) -> None:
     """Compare two ragscore result files and output a markdown table of metric differences."""
     # Ensure stdout can handle UTF-8 (e.g., emojis) on Windows consoles
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     try:
         with open(results_a_path, "r", encoding="utf-8") as f:
             data_a = json.load(f)
@@ -631,9 +691,13 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
         if not isinstance(data, dict):
             raise click.ClickException(f"Results file {label} does not contain a JSON object.")
         if "summary" not in data or not isinstance(data["summary"], dict):
-            raise click.ClickException(f"Results file {label} is missing or has invalid 'summary' field.")
+            raise click.ClickException(
+                f"Results file {label} is missing or has invalid 'summary' field."
+            )
         if with_significance and ("scores" not in data or not isinstance(data["scores"], list)):
-            raise click.ClickException(f"Results file {label} is missing or has invalid 'scores' field (required for --with-significance).")
+            raise click.ClickException(
+                f"Results file {label} is missing or has invalid 'scores' field (required for --with-significance)."
+            )
 
     summary_a = data_a["summary"]
     summary_b = data_b["summary"]
@@ -675,7 +739,7 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
             significance_result = stats.test_significance(
                 metric_scores_a,
                 metric_scores_b,
-                alpha=0.05  # Default significance level for compare
+                alpha=0.05,  # Default significance level for compare
             )
 
             p_value = significance_result["p_value"]
@@ -720,13 +784,49 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
 @cli.command()
 @click.argument("results_path", type=click.Path(exists=True))
 @click.argument("baseline_path", type=click.Path(exists=True))
-@click.option("--min-score", multiple=True, type=str, help="Minimum score required for a metric (format: --min-score metric=value). Repeatable.")
-@click.option("--max-regression", multiple=True, type=str, help="Maximum allowed regression for a metric (format: --max-regression metric=value). Repeatable.")
-@click.option("--max-regression-significant", multiple=True, type=str, help="Maximum allowed significant regression for a metric (format: --max-regression-significant metric=value). Repeatable.")
-@click.option("--significance-level", "-s", default=0.05, show_default=True, help="Significance level for statistical tests (default: 0.05).")
-@click.option("--gate-config", type=click.Path(exists=True), help="Path to a JSON or YAML file containing gate configuration.")
-@click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
-def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_regression: tuple[str, ...], max_regression_significant: tuple[str, ...], significance_level: float, gate_config: str | None, output: str | None) -> None:
+@click.option(
+    "--min-score",
+    multiple=True,
+    type=str,
+    help="Minimum score required for a metric (format: --min-score metric=value). Repeatable.",
+)
+@click.option(
+    "--max-regression",
+    multiple=True,
+    type=str,
+    help="Maximum allowed regression for a metric (format: --max-regression metric=value). Repeatable.",
+)
+@click.option(
+    "--max-regression-significant",
+    multiple=True,
+    type=str,
+    help="Maximum allowed significant regression for a metric (format: --max-regression-significant metric=value). Repeatable.",
+)
+@click.option(
+    "--significance-level",
+    "-s",
+    default=0.05,
+    show_default=True,
+    help="Significance level for statistical tests (default: 0.05).",
+)
+@click.option(
+    "--gate-config",
+    type=click.Path(exists=True),
+    help="Path to a JSON or YAML file containing gate configuration.",
+)
+@click.option(
+    "--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout."
+)
+def gate(
+    results_path: str,
+    baseline_path: str,
+    min_score: tuple[str, ...],
+    max_regression: tuple[str, ...],
+    max_regression_significant: tuple[str, ...],
+    significance_level: float,
+    gate_config: str | None,
+    output: str | None,
+) -> None:
     """Evaluate quality gates: fail the build if metrics regress past defined thresholds.
 
     RESULTS_PATH: JSON file containing the current run's results (same format as `rageval run --output`).
@@ -737,8 +837,8 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
     Exit code 0 if all gates pass, 1 if any gate fails.
     """
     # Ensure stdout can handle UTF-8 (e.g., emojis) on Windows consoles
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
 
     # Load the results files
     try:
@@ -755,9 +855,13 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
         if not isinstance(data_dict, dict):
             raise click.ClickException(f"{label.capitalize()} file does not contain a JSON object.")
         if "summary" not in data_dict or not isinstance(data_dict["summary"], dict):
-            raise click.ClickException(f"{label.capitalize()} file is missing or has invalid 'summary' field.")
+            raise click.ClickException(
+                f"{label.capitalize()} file is missing or has invalid 'summary' field."
+            )
         if "scores" not in data_dict or not isinstance(data_dict["scores"], list):
-            raise click.ClickException(f"{label.capitalize()} file is missing or has invalid 'scores' field.")
+            raise click.ClickException(
+                f"{label.capitalize()} file is missing or has invalid 'scores' field."
+            )
 
     results_summary = results_data["summary"]
     baseline_summary = baseline_data["summary"]
@@ -782,15 +886,23 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
                 gate_rules["min_score"].update(config_data["min_score"])
             if "max_regression" in config_data and isinstance(config_data["max_regression"], dict):
                 gate_rules["max_regression"].update(config_data["max_regression"])
-            if "max_regression_significant" in config_data and isinstance(config_data["max_regression_significant"], dict):
-                gate_rules["max_regression_significant"].update(config_data["max_regression_significant"])
+            if "max_regression_significant" in config_data and isinstance(
+                config_data["max_regression_significant"], dict
+            ):
+                gate_rules["max_regression_significant"].update(
+                    config_data["max_regression_significant"]
+                )
         except exc_types as e:
             if isinstance(e, click.ClickException):
                 raise
             elif isinstance(e, json.JSONDecodeError):
-                raise click.ClickException(f"Failed to parse gate config file (invalid JSON): {e}") from None
+                raise click.ClickException(
+                    f"Failed to parse gate config file (invalid JSON): {e}"
+                ) from None
             elif yaml is not None and isinstance(e, yaml.YAMLError):
-                raise click.ClickException(f"Failed to parse gate config file (invalid YAML): {e}") from None
+                raise click.ClickException(
+                    f"Failed to parse gate config file (invalid YAML): {e}"
+                ) from None
 
     # Process inline flags (they override the config file)
     for item in min_score:
@@ -799,24 +911,34 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             value = float(value_str)
             gate_rules["min_score"][metric] = value
         except ValueError:
-            raise click.ClickException(f"Invalid --min-score format: '{item}'. Expected format: metric=value")
+            raise click.ClickException(
+                f"Invalid --min-score format: '{item}'. Expected format: metric=value"
+            )
     for item in max_regression:
         try:
             metric, value_str = item.split("=", 1)
             value = float(value_str)
             gate_rules["max_regression"][metric] = value
         except ValueError:
-            raise click.ClickException(f"Invalid --max-regression format: '{item}'. Expected format: metric=value")
+            raise click.ClickException(
+                f"Invalid --max-regression format: '{item}'. Expected format: metric=value"
+            )
     for item in max_regression_significant:
         try:
             metric, value_str = item.split("=", 1)
             value = float(value_str)
             gate_rules["max_regression_significant"][metric] = value
         except ValueError:
-            raise click.ClickException(f"Invalid --max-regression-significant format: '{item}'. Expected format: metric=value")
+            raise click.ClickException(
+                f"Invalid --max-regression-significant format: '{item}'. Expected format: metric=value"
+            )
 
     # If no rules configured, exit with message
-    if not gate_rules["min_score"] and not gate_rules["max_regression"] and not gate_rules["max_regression_significant"]:
+    if (
+        not gate_rules["min_score"]
+        and not gate_rules["max_regression"]
+        and not gate_rules["max_regression_significant"]
+    ):
         click.echo("No quality gates configured. Exiting with status 0.")
         if output:
             Path(output).write_text("No quality gates configured.\n", encoding="utf-8")
@@ -827,7 +949,14 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
     all_passed = True
 
     # Helper to add a row
-    def add_row(metric: str, rule_type: str, rule_value: float, current_val: float | None, baseline_val: float | None, passed: bool):
+    def add_row(
+        metric: str,
+        rule_type: str,
+        rule_value: float,
+        current_val: float | None,
+        baseline_val: float | None,
+        passed: bool,
+    ):
         nonlocal all_passed
         if not passed:
             all_passed = False
@@ -839,7 +968,16 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             threshold_str = f"<= {rule_value:.3f} (baseline - current)"
         # For max_regression, we show the baseline value as reference
         baseline_str = f"{baseline_val:.3f}" if baseline_val is not None else "N/A"
-        rows.append((metric, rule_type, current_str, threshold_str, baseline_str, "PASS" if passed else "FAIL"))
+        rows.append(
+            (
+                metric,
+                rule_type,
+                current_str,
+                threshold_str,
+                baseline_str,
+                "PASS" if passed else "FAIL",
+            )
+        )
 
     # Helper to add a row with significance information
     def add_row_with_significance(
@@ -851,7 +989,7 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
         passed: bool,
         regression: float | None,
         significance_status: str,
-        stat_info: str
+        stat_info: str,
     ):
         nonlocal all_passed
         if not passed:
@@ -871,7 +1009,18 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
         # For significant regression test, we show additional info
         extra_info = f"{significance_status} ({stat_info})"
 
-        rows.append((metric, rule_type, current_str, threshold_str, baseline_str, regression_str, extra_info, "PASS" if passed else "FAIL"))
+        rows.append(
+            (
+                metric,
+                rule_type,
+                current_str,
+                threshold_str,
+                baseline_str,
+                regression_str,
+                extra_info,
+                "PASS" if passed else "FAIL",
+            )
+        )
 
     # Evaluate min_score rules
     for metric, threshold in gate_rules["min_score"].items():
@@ -896,18 +1045,12 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
     # Evaluate max_regression_significant rules
     for metric, max_reg in gate_rules["max_regression_significant"].items():
         # Extract individual scores for this metric from both runs
-        baseline_metric_scores = stats.extract_metric_scores(
-            {"scores": baseline_scores}, metric
-        )
-        current_metric_scores = stats.extract_metric_scores(
-            {"scores": results_scores}, metric
-        )
+        baseline_metric_scores = stats.extract_metric_scores({"scores": baseline_scores}, metric)
+        current_metric_scores = stats.extract_metric_scores({"scores": results_scores}, metric)
 
         # Perform significance test
         significance_result = stats.test_significance(
-            baseline_metric_scores,
-            current_metric_scores,
-            alpha=significance_level
+            baseline_metric_scores, current_metric_scores, alpha=significance_level
         )
 
         baseline_mean = significance_result["baseline_mean"]
@@ -917,7 +1060,11 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
         method = significance_result["method"]
 
         # Calculate regression (baseline - current, so positive means current is worse)
-        regression = baseline_mean - current_mean if baseline_mean is not None and current_mean is not None else None
+        regression = (
+            baseline_mean - current_mean
+            if baseline_mean is not None and current_mean is not None
+            else None
+        )
 
         # Determine if gate passes:
         # Fail ONLY if BOTH conditions are met:
@@ -958,7 +1105,7 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             passed,
             regression,
             significance_status,
-            stat_info
+            stat_info,
         )
 
     # Build markdown table
@@ -970,15 +1117,28 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             "| Metric | Rule | Current Value | Threshold | Baseline Value | Regression | Info | Pass/Fail |",
             "|---|---|---|---|---|---|---|---|",
         ]
-        for metric, rule, current_str, threshold_str, baseline_str, regression_str, extra_info, result in rows:
-            lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {regression_str} | {extra_info} | {result} |")
+        for (
+            metric,
+            rule,
+            current_str,
+            threshold_str,
+            baseline_str,
+            regression_str,
+            extra_info,
+            result,
+        ) in rows:
+            lines.append(
+                f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {regression_str} | {extra_info} | {result} |"
+            )
     else:
         lines = [
             "| Metric | Rule | Current Value | Threshold | Baseline Value | Pass/Fail |",
             "|---|---|---|---|---|---|",
         ]
         for metric, rule, current_str, threshold_str, baseline_str, result in rows:
-            lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {result} |")
+            lines.append(
+                f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {result} |"
+            )
 
     table = "\n".join(lines)
 

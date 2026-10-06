@@ -72,15 +72,16 @@ async def main() -> None:
     metrics = [PrecisionAtK(k=3), MRR()]
 
     report = await run_evaluation(
-        test_cases, retriever_adapter, generator_adapter, metrics,
+        test_cases,
+        retriever_adapter,
+        generator_adapter,
+        metrics,
         RunConfig(run_id="langchain-example"),
     )
 
     print(f"Evaluated {len(report.results)} test cases\n")
     for result in report.results:
-        question = next(
-            tc.question for tc in test_cases if tc.test_case_id == result.test_case_id
-        )
+        question = next(tc.question for tc in test_cases if tc.test_case_id == result.test_case_id)
         print(f"Q: {question}")
         print(f"A: {result.generated_answer}\n")
 

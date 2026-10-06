@@ -29,6 +29,7 @@ def _utcnow() -> datetime:
 # Input: what a user provides in their dataset (test_set.json)
 # ---------------------------------------------------------------------------
 
+
 class TestCase(BaseModel):
     """A single question in the evaluation dataset."""
 
@@ -47,6 +48,7 @@ class TestCase(BaseModel):
 # ---------------------------------------------------------------------------
 # Mid: raw output of running a retriever/generator against a TestCase
 # ---------------------------------------------------------------------------
+
 
 class RetrievedChunk(BaseModel):
     """A single retrieved chunk, with enough identity to score against
@@ -92,6 +94,7 @@ class MetricScore(BaseModel):
 # ---------------------------------------------------------------------------
 # Star schema dimension/fact rows (BI export: SQLite / Pandas / Power BI)
 # ---------------------------------------------------------------------------
+
 
 class DimRun(BaseModel):
     run_id: str = Field(default_factory=_new_id)

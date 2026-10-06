@@ -92,6 +92,7 @@ Write one question and answer pair that requires information from BOTH passages.
 # Chunking
 # ---------------------------------------------------------------------------
 
+
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
     """Split text into word-count-based chunks with overlap between
     consecutive chunks. Deliberately simple (no sentence-boundary
@@ -147,6 +148,7 @@ def load_documents_from_dir(
 # Generation
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SynthesisReport:
     """Result of a synthesis run: the successfully generated test
@@ -165,7 +167,7 @@ async def _generate_one(
     judge: LLMJudge,
     query_type: str = "standard",
     context_chunk_id: str | None = None,
-    context_text: str | None = None
+    context_text: str | None = None,
 ) -> TestCase:
     # Select the appropriate system prompt based on query_type
     if query_type == "standard":
@@ -185,8 +187,7 @@ async def _generate_one(
         if context_text is None:
             raise ValueError("Multi-hop generation requires context_text")
         user_prompt = _USER_PROMPT_TEMPLATE_MULTI_HOP.format(
-            passage_a=chunk_text_value,
-            passage_b=context_text
+            passage_a=chunk_text_value, passage_b=context_text
         )
         expected_doc_ids = [chunk_doc_id, context_chunk_id]  # Both chunks are needed
     else:
@@ -196,9 +197,7 @@ async def _generate_one(
     data = extract_json_object(raw)
 
     if "question" not in data or "answer" not in data:
-        raise ValueError(
-            f"Synthesis response JSON is missing 'question' or 'answer': {data!r}"
-        )
+        raise ValueError(f"Synthesis response JSON is missing 'question' or 'answer': {data!r}")
 
     # Override answer for unanswerable questions
     if query_type == "unanswerable":
@@ -267,7 +266,7 @@ async def synthesize_test_set(
         text: str,
         query_type: str,
         context_chunk_id: str | None = None,
-        context_text: str | None = None
+        context_text: str | None = None,
     ) -> tuple[str, TestCase | None, str | None]:
         async with semaphore:
             try:
@@ -278,7 +277,7 @@ async def synthesize_test_set(
                     judge,
                     query_type,
                     context_chunk_id,
-                    context_text
+                    context_text,
                 )
                 return chunk_doc_id, tc, None
             except Exception as exc:  # noqa: BLE001 - deliberately broad, see class docstring
@@ -312,13 +311,15 @@ async def synthesize_test_set(
             chunk_a_id, chunk_a_text = all_chunks[i]
             chunk_b_id, chunk_b_text = all_chunks[i + 1]
             for _ in range(questions_per_chunk):
-                tasks.append(_bounded_generate(
-                    chunk_a_id,  # primary chunk ID for the test case
-                    chunk_a_text,
-                    "multi_hop",
-                    context_chunk_id=chunk_b_id,
-                    context_text=chunk_b_text
-                ))
+                tasks.append(
+                    _bounded_generate(
+                        chunk_a_id,  # primary chunk ID for the test case
+                        chunk_a_text,
+                        "multi_hop",
+                        context_chunk_id=chunk_b_id,
+                        context_text=chunk_b_text,
+                    )
+                )
 
     results = await asyncio.gather(*tasks)
 

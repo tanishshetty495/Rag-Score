@@ -13,6 +13,7 @@ import random
 # Try to import scipy for Welch's t-test, but make it optional
 try:
     from scipy import stats
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
@@ -41,7 +42,9 @@ def welch_t_test(
         raise ImportError("scipy is not available. Install with: pip install rag-score[stats]")
 
     if len(baseline_scores) < 2:
-        raise ValueError(f"Baseline sample too small for Welch's t-test: {len(baseline_scores)} < 2")
+        raise ValueError(
+            f"Baseline sample too small for Welch's t-test: {len(baseline_scores)} < 2"
+        )
     if len(current_scores) < 2:
         raise ValueError(f"Current sample too small for Welch's t-test: {len(current_scores)} < 2")
 
@@ -160,7 +163,7 @@ def test_significance(
             "ci_lower": None,
             "ci_upper": None,
             "significant": False,
-            "method": "degenerate_empty_both"
+            "method": "degenerate_empty_both",
         }
 
     if len(baseline_scores) == 0:
@@ -172,19 +175,21 @@ def test_significance(
             "ci_lower": None,
             "ci_upper": None,
             "significant": False,
-            "method": "degenerate_empty_baseline"
+            "method": "degenerate_empty_baseline",
         }
 
     if len(current_scores) == 0:
         return {
-            "baseline_mean": sum(baseline_scores) / len(baseline_scores) if baseline_scores else None,
+            "baseline_mean": sum(baseline_scores) / len(baseline_scores)
+            if baseline_scores
+            else None,
             "current_mean": None,
             "delta": -(sum(baseline_scores) / len(baseline_scores) if baseline_scores else 0.0),
             "p_value": None,
             "ci_lower": None,
             "ci_upper": None,
             "significant": False,
-            "method": "degenerate_empty_current"
+            "method": "degenerate_empty_current",
         }
 
     # For meaningful statistical testing, we need at least 2 samples in each group
@@ -202,7 +207,7 @@ def test_significance(
             "ci_lower": None,
             "ci_upper": None,
             "significant": False,
-            "method": "insufficient_sample_size"
+            "method": "insufficient_sample_size",
         }
 
     # Try to use Welch's t-test if scipy is available and requested
@@ -220,7 +225,7 @@ def test_significance(
                 "ci_lower": None,
                 "ci_upper": None,
                 "significant": significant,
-                "method": method
+                "method": method,
             }
         except (ValueError, ImportError):
             # If Welch's t-test fails due to scipy unavailability or insufficient
@@ -243,7 +248,7 @@ def test_significance(
         "ci_lower": ci_lower,
         "ci_upper": ci_upper,
         "significant": significant,
-        "method": method
+        "method": method,
     }
 
 

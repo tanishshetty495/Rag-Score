@@ -19,11 +19,11 @@ from typing import Protocol
 class JudgeCache(Protocol):
     """Async cache for judge verdicts."""
 
-    async def get(self, key: str) -> 'JudgeVerdict | None':
+    async def get(self, key: str) -> JudgeVerdict | None:
         """Return cached verdict if present and not expired, else None."""
         ...
 
-    async def set(self, key: str, verdict: 'JudgeVerdict') -> None:
+    async def set(self, key: str, verdict: JudgeVerdict) -> None:
         """Store a verdict in the cache."""
         ...
 
@@ -63,7 +63,7 @@ class InMemoryCacheBackend:
         self.hits = 0
         self.misses = 0
 
-    async def get(self, key: str) -> 'JudgeVerdict | None':
+    async def get(self, key: str) -> JudgeVerdict | None:
         entry = self._store.get(key)
         if entry is None:
             self.misses += 1
@@ -73,7 +73,7 @@ class InMemoryCacheBackend:
         self.hits += 1
         return entry.verdict
 
-    async def set(self, key: str, verdict: 'JudgeVerdict') -> None:
+    async def set(self, key: str, verdict: JudgeVerdict) -> None:
         self._store[key] = _CacheEntry(verdict=verdict)
 
     def stats(self) -> tuple[int, int]:
@@ -112,7 +112,7 @@ class FileCacheBackend:
             self._conn.commit()
         return self._conn
 
-    async def get(self, key: str) -> 'JudgeVerdict | None':
+    async def get(self, key: str) -> JudgeVerdict | None:
         conn = await self._get_conn()
         cursor = conn.execute(
             "SELECT verdict_json, cached_at FROM judge_cache WHERE key = ?", (key,)
@@ -125,11 +125,12 @@ class FileCacheBackend:
         # Check expiry (handled by caller via max_age_seconds, but we can do it here too)
         # We'll let the caller handle expiry based on CacheConfig.max_age_seconds
         from rag_score.judges.base import JudgeVerdict
+
         self.hits += 1
         verdict = JudgeVerdict.model_validate_json(verdict_json)
         return verdict
 
-    async def set(self, key: str, verdict: 'JudgeVerdict') -> None:
+    async def set(self, key: str, verdict: JudgeVerdict) -> None:
         print(f"FileCacheBackend.set called with key: {key}")
         conn = await self._get_conn()
         verdict_json = verdict.model_dump_json()

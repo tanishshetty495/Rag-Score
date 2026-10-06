@@ -78,8 +78,11 @@ class TestRunEvaluation:
 
         config = RunConfig(run_id="r1")
         report = await run_evaluation(
-            sample_test_cases, fake_retriever, fake_generator,
-            [Faithfulness(judge=fake_judge)], config,
+            sample_test_cases,
+            fake_retriever,
+            fake_generator,
+            [Faithfulness(judge=fake_judge)],
+            config,
         )
         assert len(report.scores) == len(sample_test_cases)
         assert all(s.judge_reasoning == "Looks reasonable." for s in report.scores)
@@ -99,7 +102,11 @@ class TestRunEvaluation:
         progress_calls = []
         config = RunConfig(run_id="r1")
         await run_evaluation(
-            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+            sample_test_cases,
+            fake_retriever,
+            fake_generator,
+            [MRR()],
+            config,
             on_progress=lambda: progress_calls.append(1),
         )
         assert len(progress_calls) == len(sample_test_cases)
@@ -112,7 +119,11 @@ class TestRunEvaluation:
         progress_calls = []
         config = RunConfig(run_id="r1", continue_on_error=True)
         await run_evaluation(
-            sample_test_cases, failing_retriever, fake_generator, [MRR()], config,
+            sample_test_cases,
+            failing_retriever,
+            fake_generator,
+            [MRR()],
+            config,
             on_progress=lambda: progress_calls.append(1),
         )
         assert len(progress_calls) == len(sample_test_cases)
@@ -122,6 +133,10 @@ class TestRunEvaluation:
     ):
         config = RunConfig(run_id="r1")
         report = await run_evaluation(
-            sample_test_cases, fake_retriever, fake_generator, [MRR()], config,
+            sample_test_cases,
+            fake_retriever,
+            fake_generator,
+            [MRR()],
+            config,
         )
         assert len(report.results) == len(sample_test_cases)

@@ -10,9 +10,7 @@ from rag_score.report.html_report import generate_html_report
 
 
 class TestGenerateHtmlReport:
-    async def test_writes_a_file(
-        self, tmp_path, sample_test_cases, fake_retriever, fake_generator
-    ):
+    async def test_writes_a_file(self, tmp_path, sample_test_cases, fake_retriever, fake_generator):
         config = RunConfig(run_id="r1")
         report = await run_evaluation(
             sample_test_cases, fake_retriever, fake_generator, [PrecisionAtK(k=3)], config
@@ -46,8 +44,11 @@ class TestGenerateHtmlReport:
     ):
         config = RunConfig(run_id="r1")
         report = await run_evaluation(
-            sample_test_cases, fake_retriever, fake_generator,
-            [Faithfulness(judge=fake_judge)], config,
+            sample_test_cases,
+            fake_retriever,
+            fake_generator,
+            [Faithfulness(judge=fake_judge)],
+            config,
         )
         run = DimRun(run_id="r1", project_name="p", dataset_name="d")
 

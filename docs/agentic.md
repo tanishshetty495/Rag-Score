@@ -8,11 +8,14 @@ For evaluating a multi-step agent (one that decides which tools to call, in what
 # my_agent.py
 from rag_score.agentic.types import ToolCall
 
+
 async def my_agent(query: str) -> tuple[list[ToolCall], str]:
     # call your actual agent here - LangGraph, a custom ReAct loop, whatever
     # a real agent would decide which tools to call using an LLM; return
     # every tool call it actually made, in order, plus its final answer
-    return [ToolCall(tool_name="search", tool_input={"q": query}, tool_output="...")], "the final answer"
+    return [
+        ToolCall(tool_name="search", tool_input={"q": query}, tool_output="...")
+    ], "the final answer"
 ```
 
 Unlike the retriever/generator split used for single-shot RAG, there's only one function here - the tool-calling loop happens inside your agent, and this adapter's only job is to report what it did.

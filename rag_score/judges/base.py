@@ -156,9 +156,7 @@ def _parse_verdict(raw: str) -> JudgeVerdict:
     data = extract_json_object(raw)
 
     if "score" not in data or "reasoning" not in data:
-        raise ValueError(
-            f"Judge response JSON is missing 'score' or 'reasoning': {data!r}"
-        )
+        raise ValueError(f"Judge response JSON is missing 'score' or 'reasoning': {data!r}")
 
     # Clamp defensively - some models return 0-10 or 0-100 despite
     # instructions. If it's clearly out of 0-1 range, assume out of 10.

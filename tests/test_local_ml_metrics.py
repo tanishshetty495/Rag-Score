@@ -27,14 +27,17 @@ class _FakeEncoder:
 
 class TestLocalSemanticFaithfulness:
     async def test_similar_answer_and_context_scores_high(self):
-        encoder = _FakeEncoder({
-            "the answer": [1.0, 0.0, 0.0],
-            "the context": [1.0, 0.0, 0.0],
-        })
+        encoder = _FakeEncoder(
+            {
+                "the answer": [1.0, 0.0, 0.0],
+                "the context": [1.0, 0.0, 0.0],
+            }
+        )
         metric = LocalSemanticFaithfulness(encoder=encoder)
         tc = TestCase(question="q")
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="d", text="the context")],
             generated_answer="the answer",
         )
@@ -42,14 +45,17 @@ class TestLocalSemanticFaithfulness:
         assert score == 1.0
 
     async def test_dissimilar_answer_and_context_scores_low(self):
-        encoder = _FakeEncoder({
-            "the answer": [1.0, 0.0, 0.0],
-            "unrelated context": [0.0, 1.0, 0.0],
-        })
+        encoder = _FakeEncoder(
+            {
+                "the answer": [1.0, 0.0, 0.0],
+                "unrelated context": [0.0, 1.0, 0.0],
+            }
+        )
         metric = LocalSemanticFaithfulness(encoder=encoder)
         tc = TestCase(question="q")
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="d", text="unrelated context")],
             generated_answer="the answer",
         )
@@ -61,7 +67,8 @@ class TestLocalSemanticFaithfulness:
         metric = LocalSemanticFaithfulness(encoder=encoder)
         tc = TestCase(question="q")
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="d", text="x")],
             generated_answer=None,
         )
@@ -73,7 +80,9 @@ class TestLocalSemanticFaithfulness:
         encoder = _FakeEncoder()
         metric = LocalSemanticFaithfulness(encoder=encoder)
         tc = TestCase(question="q")
-        result = EvalResult(run_id="r", test_case_id="tc", retrieved_context=[], generated_answer="x")
+        result = EvalResult(
+            run_id="r", test_case_id="tc", retrieved_context=[], generated_answer="x"
+        )
         score = await metric.score(tc, result)
         assert score == 0.0
         assert encoder.call_count == 0
@@ -83,7 +92,8 @@ class TestLocalSemanticFaithfulness:
         metric = LocalSemanticFaithfulness(encoder=encoder)
         tc = TestCase(question="q")
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[
                 RetrievedChunk(doc_id="d1", text="first chunk"),
                 RetrievedChunk(doc_id="d2", text="second chunk"),
@@ -104,10 +114,12 @@ class TestLocalSemanticFaithfulness:
 
 class TestLocalSemanticAnswerRelevance:
     async def test_relevant_answer_scores_high(self):
-        encoder = _FakeEncoder({
-            "what is x": [1.0, 0.0, 0.0],
-            "x is y": [1.0, 0.0, 0.0],
-        })
+        encoder = _FakeEncoder(
+            {
+                "what is x": [1.0, 0.0, 0.0],
+                "x is y": [1.0, 0.0, 0.0],
+            }
+        )
         metric = LocalSemanticAnswerRelevance(encoder=encoder)
         tc = TestCase(question="what is x")
         result = EvalResult(run_id="r", test_case_id="tc", generated_answer="x is y")
@@ -127,7 +139,9 @@ class TestLocalSemanticAnswerRelevance:
         encoder = _FakeEncoder()
         metric = LocalSemanticAnswerRelevance(encoder=encoder)
         tc = TestCase(question="q")
-        result = EvalResult(run_id="r", test_case_id="tc", retrieved_context=[], generated_answer="an answer")
+        result = EvalResult(
+            run_id="r", test_case_id="tc", retrieved_context=[], generated_answer="an answer"
+        )
         await metric.score(tc, result)
         assert encoder.call_count == 1  # ran despite no context
 

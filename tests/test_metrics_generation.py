@@ -21,13 +21,16 @@ class TestFaithfulness:
         self, sample_test_cases, sample_eval_result, fake_judge
     ):
         metric = Faithfulness(judge=fake_judge)
-        score, reasoning = await metric.score_with_reasoning(sample_test_cases[0], sample_eval_result)
+        score, reasoning = await metric.score_with_reasoning(
+            sample_test_cases[0], sample_eval_result
+        )
         assert score == 0.8
         assert reasoning == "Looks reasonable."
 
     async def test_no_answer_skips_judge_call(self, sample_test_cases, fake_judge):
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="d", text="x")],
             generated_answer=None,
         )
@@ -38,7 +41,8 @@ class TestFaithfulness:
 
     async def test_no_context_skips_judge_call(self, sample_test_cases, fake_judge):
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[],
             generated_answer="some answer",
         )
@@ -91,7 +95,8 @@ class TestContextPrecision:
     async def test_does_not_require_generated_answer(self, sample_test_cases, fake_judge):
         # Context precision is purely about retrieval, not generation
         result = EvalResult(
-            run_id="r", test_case_id="tc",
+            run_id="r",
+            test_case_id="tc",
             retrieved_context=[RetrievedChunk(doc_id="d", text="x")],
             generated_answer=None,
         )

@@ -48,10 +48,7 @@ async def my_retriever(query: str, top_k: int = 5) -> list[RetrievedChunk]:
         if overlap > 0:
             scored.append((overlap, doc_id, text))
     scored.sort(reverse=True)
-    return [
-        RetrievedChunk(doc_id=doc_id, text=text)
-        for _, doc_id, text in scored[:top_k]
-    ]
+    return [RetrievedChunk(doc_id=doc_id, text=text) for _, doc_id, text in scored[:top_k]]
 
 
 async def my_generator(query: str, context: list[RetrievedChunk]) -> str:
@@ -88,9 +85,7 @@ async def main() -> None:
 
     print(f"Evaluated {len(report.results)} test cases\n")
     for result in report.results:
-        question = next(
-            tc.question for tc in test_cases if tc.test_case_id == result.test_case_id
-        )
+        question = next(tc.question for tc in test_cases if tc.test_case_id == result.test_case_id)
         print(f"Q: {question}")
         print(f"A: {result.generated_answer}\n")
 

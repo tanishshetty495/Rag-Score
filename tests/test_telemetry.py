@@ -95,7 +95,13 @@ class TestEstimateCost:
 
 class TestDefaultPricing:
     def test_known_models_present(self):
-        for model in ["gpt-4o-mini", "gpt-4o", "claude-haiku-4-5", "claude-opus-5", "claude-sonnet-5"]:
+        for model in [
+            "gpt-4o-mini",
+            "gpt-4o",
+            "claude-haiku-4-5",
+            "claude-opus-5",
+            "claude-sonnet-5",
+        ]:
             assert model in DEFAULT_PRICING
             prompt, completion = DEFAULT_PRICING[model]
             assert isinstance(prompt, float)

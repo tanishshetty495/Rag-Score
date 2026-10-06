@@ -43,16 +43,13 @@ class NDCG(Metric):
 
         top_k = result.retrieved_context[: self.k]
         relevances = [
-            1 if (chunk.doc_id is not None and chunk.doc_id in expected) else 0
-            for chunk in top_k
+            1 if (chunk.doc_id is not None and chunk.doc_id in expected) else 0 for chunk in top_k
         ]
 
         actual_dcg = _dcg(relevances)
 
         # Ideal ranking: all relevant docs (up to k) first.
-        ideal_relevances = [1] * min(len(expected), self.k) + [0] * max(
-            0, self.k - len(expected)
-        )
+        ideal_relevances = [1] * min(len(expected), self.k) + [0] * max(0, self.k - len(expected))
         ideal_dcg = _dcg(ideal_relevances)
 
         if ideal_dcg == 0:

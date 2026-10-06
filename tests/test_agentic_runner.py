@@ -94,7 +94,9 @@ class TestRunTrajectoryEvaluation:
             return calls, "answer"
 
         test_cases = [
-            TrajectoryTestCase(question="q", expected_tool_sequence=["search_weather", "calculator"])
+            TrajectoryTestCase(
+                question="q", expected_tool_sequence=["search_weather", "calculator"]
+            )
         ]
         agent = CallableAgentAdapter(wrong_order_agent)
         metrics = [ToolSelectionRecall(), ToolSelectionPrecision(), ToolCallOrderCorrectness()]
@@ -115,7 +117,10 @@ class TestRunTrajectoryEvaluation:
         config = TrajectoryRunConfig(run_id="r1")
         progress_calls = []
         await run_trajectory_evaluation(
-            test_cases, agent, [ToolSelectionRecall()], config,
+            test_cases,
+            agent,
+            [ToolSelectionRecall()],
+            config,
             on_progress=lambda: progress_calls.append(1),
         )
         assert len(progress_calls) == 2
@@ -126,7 +131,10 @@ class TestRunTrajectoryEvaluation:
         config = TrajectoryRunConfig(run_id="r1", continue_on_error=True)
         progress_calls = []
         await run_trajectory_evaluation(
-            test_cases, agent, [ToolSelectionRecall()], config,
+            test_cases,
+            agent,
+            [ToolSelectionRecall()],
+            config,
             on_progress=lambda: progress_calls.append(1),
         )
         assert len(progress_calls) == 1

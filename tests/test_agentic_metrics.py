@@ -14,7 +14,8 @@ from rag_score.agentic.types import ToolCall, TrajectoryEvalResult, TrajectoryTe
 
 def _result(tool_names: list[str]) -> TrajectoryEvalResult:
     return TrajectoryEvalResult(
-        run_id="r", test_case_id="tc",
+        run_id="r",
+        test_case_id="tc",
         tool_calls=[ToolCall(tool_name=n) for n in tool_names],
     )
 

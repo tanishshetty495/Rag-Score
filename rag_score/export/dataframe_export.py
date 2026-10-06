@@ -19,8 +19,7 @@ def _require_pandas():
         import pandas as pd
     except ImportError as e:
         raise ImportError(
-            "pandas is required for DataFrame export. "
-            "Install it with: pip install rag-score[bi]"
+            "pandas is required for DataFrame export. Install it with: pip install rag-score[bi]"
         ) from e
     return pd
 

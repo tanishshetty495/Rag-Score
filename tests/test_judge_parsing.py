@@ -23,7 +23,9 @@ class TestParseVerdict:
         assert v.score == 0.6
 
     def test_prose_wrapped_json(self):
-        v = _parse_verdict('Here is my verdict: {"score": 0.4, "reasoning": "meh"} Hope that helps!')
+        v = _parse_verdict(
+            'Here is my verdict: {"score": 0.4, "reasoning": "meh"} Hope that helps!'
+        )
         assert v.score == 0.4
         assert v.reasoning == "meh"
 

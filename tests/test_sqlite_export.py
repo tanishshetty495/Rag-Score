@@ -26,8 +26,7 @@ class TestExportToSqlite:
 
         conn = sqlite3.connect(str(db_path))
         tables = {
-            row[0]
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
         assert {"dim_runs", "dim_test_cases", "fact_evaluations", "fact_metric_scores"} <= tables
 
@@ -74,9 +73,10 @@ class TestExportToSqlite:
         assert conn.execute("SELECT COUNT(*) FROM dim_test_cases").fetchone()[0] == len(
             sample_test_cases
         )
-        assert conn.execute("SELECT COUNT(*) FROM fact_evaluations").fetchone()[0] == len(
-            sample_test_cases
-        ) * 2
+        assert (
+            conn.execute("SELECT COUNT(*) FROM fact_evaluations").fetchone()[0]
+            == len(sample_test_cases) * 2
+        )
 
     async def test_creates_parent_directories(
         self, tmp_path, sample_test_cases, fake_retriever, fake_generator

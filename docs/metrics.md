@@ -54,6 +54,7 @@ Override the model with `encoder_model` in your config, or pass `model_name=` di
 
 ```python
 from rag_score.metrics.generation.local_faithfulness import LocalSemanticFaithfulness
+
 metric = LocalSemanticFaithfulness(model_name="all-mpnet-base-v2")  # larger, more accurate, slower
 ```
 

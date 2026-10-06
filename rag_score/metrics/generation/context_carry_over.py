@@ -98,9 +98,7 @@ class ContextCarryOver(Metric):
             formatted_history_lines.append(f"{role.capitalize()}: {content}")
 
         if not result.generated_answer:
-            return JudgeVerdict(
-                score=0.0, reasoning="No generated answer to evaluate."
-            )
+            return JudgeVerdict(score=0.0, reasoning="No generated answer to evaluate.")
 
         history_text = "\n".join(formatted_history_lines)
         user_prompt = _USER_PROMPT_TEMPLATE.format(
