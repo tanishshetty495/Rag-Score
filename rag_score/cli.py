@@ -27,6 +27,9 @@ from typing import Any
 
 import click
 
+# Import our stats module for significance testing
+from rag_score import stats
+
 try:
     import yaml
 except ImportError:
@@ -609,7 +612,8 @@ def run_trajectory(config_path: str) -> None:
 @click.argument("results_b_path", type=click.Path(exists=True))
 @click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
 @click.option("--threshold", "-t", default=0.02, show_default=True, help="Threshold for considering a change as improvement/regression.")
-def compare(results_a_path: str, results_b_path: str, output: str | None, threshold: float) -> None:
+@click.option("--with-significance/--no-with-significance", default=False, show_default=True, help="Include statistical significance testing in comparison.")
+def compare(results_a_path: str, results_b_path: str, output: str | None, threshold: float, with_significance: bool) -> None:
     """Compare two ragscore result files and output a markdown table of metric differences."""
     # Ensure stdout can handle UTF-8 (e.g., emojis) on Windows consoles
     if hasattr(sys.stdout, 'reconfigure'):
@@ -628,9 +632,13 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
             raise click.ClickException(f"Results file {label} does not contain a JSON object.")
         if "summary" not in data or not isinstance(data["summary"], dict):
             raise click.ClickException(f"Results file {label} is missing or has invalid 'summary' field.")
+        if with_significance and ("scores" not in data or not isinstance(data["scores"], list)):
+            raise click.ClickException(f"Results file {label} is missing or has invalid 'scores' field (required for --with-significance).")
 
     summary_a = data_a["summary"]
     summary_b = data_b["summary"]
+    scores_a = data_a.get("scores", []) if with_significance else []
+    scores_b = data_b.get("scores", []) if with_significance else []
 
     # Get all unique metric names from both summaries
     all_metrics = set(summary_a.keys()) | set(summary_b.keys())
@@ -656,6 +664,36 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
                 delta_str = f"{delta:+.3f}"
         else:
             delta_str = "N/A"
+
+        # Add significance information if requested
+        if with_significance:
+            # Extract scores for this metric from both runs
+            metric_scores_a = stats.extract_metric_scores({"scores": scores_a}, metric)
+            metric_scores_b = stats.extract_metric_scores({"scores": scores_b}, metric)
+
+            # Perform significance test
+            significance_result = stats.test_significance(
+                metric_scores_a,
+                metric_scores_b,
+                alpha=0.05  # Default significance level for compare
+            )
+
+            p_value = significance_result["p_value"]
+            method = significance_result["method"]
+            significant = significance_result["significant"]
+
+            if p_value is not None:
+                stat_info = f"p={p_value:.4f}"
+                significance_indicator = "🔬" if significant else "📊"
+            else:
+                stat_info = f"method={method}"
+                significance_indicator = "📊"
+
+            # Combine delta and significance info
+            if val_a is not None and val_b is not None:
+                delta_str = f"{delta_str} {significance_indicator} [{stat_info}]"
+            else:
+                delta_str = f"{delta_str} [{stat_info}]"
 
         rows.append((metric, str_a, str_b, delta_str))
 
@@ -684,9 +722,11 @@ def compare(results_a_path: str, results_b_path: str, output: str | None, thresh
 @click.argument("baseline_path", type=click.Path(exists=True))
 @click.option("--min-score", multiple=True, type=str, help="Minimum score required for a metric (format: --min-score metric=value). Repeatable.")
 @click.option("--max-regression", multiple=True, type=str, help="Maximum allowed regression for a metric (format: --max-regression metric=value). Repeatable.")
+@click.option("--max-regression-significant", multiple=True, type=str, help="Maximum allowed significant regression for a metric (format: --max-regression-significant metric=value). Repeatable.")
+@click.option("--significance-level", "-s", default=0.05, show_default=True, help="Significance level for statistical tests (default: 0.05).")
 @click.option("--gate-config", type=click.Path(exists=True), help="Path to a JSON or YAML file containing gate configuration.")
 @click.option("--output", "-o", type=click.Path(), help="Write markdown table to FILE instead of stdout.")
-def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_regression: tuple[str, ...], gate_config: str | None, output: str | None) -> None:
+def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_regression: tuple[str, ...], max_regression_significant: tuple[str, ...], significance_level: float, gate_config: str | None, output: str | None) -> None:
     """Evaluate quality gates: fail the build if metrics regress past defined thresholds.
 
     RESULTS_PATH: JSON file containing the current run's results (same format as `rageval run --output`).
@@ -716,12 +756,16 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             raise click.ClickException(f"{label.capitalize()} file does not contain a JSON object.")
         if "summary" not in data_dict or not isinstance(data_dict["summary"], dict):
             raise click.ClickException(f"{label.capitalize()} file is missing or has invalid 'summary' field.")
+        if "scores" not in data_dict or not isinstance(data_dict["scores"], list):
+            raise click.ClickException(f"{label.capitalize()} file is missing or has invalid 'scores' field.")
 
     results_summary = results_data["summary"]
     baseline_summary = baseline_data["summary"]
+    results_scores = results_data["scores"]
+    baseline_scores = baseline_data["scores"]
 
     # Parse gate configuration from file and inline flags
-    gate_rules = {"min_score": {}, "max_regression": {}}
+    gate_rules = {"min_score": {}, "max_regression": {}, "max_regression_significant": {}}
 
     # Load gate config file if provided
     if gate_config:
@@ -733,11 +777,13 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             config_data = _load_config(gate_config)
             if not isinstance(config_data, dict):
                 raise click.ClickException("Gate config file must contain a JSON object.")
-            # Extract min_score and max_regression sections if present
+            # Extract min_score, max_regression, and max_regression_significant sections if present
             if "min_score" in config_data and isinstance(config_data["min_score"], dict):
                 gate_rules["min_score"].update(config_data["min_score"])
             if "max_regression" in config_data and isinstance(config_data["max_regression"], dict):
                 gate_rules["max_regression"].update(config_data["max_regression"])
+            if "max_regression_significant" in config_data and isinstance(config_data["max_regression_significant"], dict):
+                gate_rules["max_regression_significant"].update(config_data["max_regression_significant"])
         except exc_types as e:
             if isinstance(e, click.ClickException):
                 raise
@@ -761,9 +807,16 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             gate_rules["max_regression"][metric] = value
         except ValueError:
             raise click.ClickException(f"Invalid --max-regression format: '{item}'. Expected format: metric=value")
+    for item in max_regression_significant:
+        try:
+            metric, value_str = item.split("=", 1)
+            value = float(value_str)
+            gate_rules["max_regression_significant"][metric] = value
+        except ValueError:
+            raise click.ClickException(f"Invalid --max-regression-significant format: '{item}'. Expected format: metric=value")
 
     # If no rules configured, exit with message
-    if not gate_rules["min_score"] and not gate_rules["max_regression"]:
+    if not gate_rules["min_score"] and not gate_rules["max_regression"] and not gate_rules["max_regression_significant"]:
         click.echo("No quality gates configured. Exiting with status 0.")
         if output:
             Path(output).write_text("No quality gates configured.\n", encoding="utf-8")
@@ -788,6 +841,38 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
         baseline_str = f"{baseline_val:.3f}" if baseline_val is not None else "N/A"
         rows.append((metric, rule_type, current_str, threshold_str, baseline_str, "PASS" if passed else "FAIL"))
 
+    # Helper to add a row with significance information
+    def add_row_with_significance(
+        metric: str,
+        rule_type: str,
+        rule_value: float,
+        current_val: float | None,
+        baseline_val: float | None,
+        passed: bool,
+        regression: float | None,
+        significance_status: str,
+        stat_info: str
+    ):
+        nonlocal all_passed
+        if not passed:
+            all_passed = False
+        # Format values
+        current_str = f"{current_val:.3f}" if current_val is not None else "N/A"
+        baseline_str = f"{baseline_val:.3f}" if baseline_val is not None else "N/A"
+
+        if rule_type == "min_score":
+            threshold_str = f">= {rule_value:.3f}"
+        else:  # max_regression or max_regression_significant
+            threshold_str = f"<= {rule_value:.3f} (baseline - current)"
+
+        # Format regression value
+        regression_str = f"{regression:.3f}" if regression is not None else "N/A"
+
+        # For significant regression test, we show additional info
+        extra_info = f"{significance_status} ({stat_info})"
+
+        rows.append((metric, rule_type, current_str, threshold_str, baseline_str, regression_str, extra_info, "PASS" if passed else "FAIL"))
+
     # Evaluate min_score rules
     for metric, threshold in gate_rules["min_score"].items():
         current_val = results_summary.get(metric)
@@ -808,13 +893,92 @@ def gate(results_path: str, baseline_path: str, min_score: tuple[str, ...], max_
             passed = regression <= max_reg  # regression must be <= max allowed
             add_row(metric, "max_regression", max_reg, current_val, baseline_val, passed)
 
+    # Evaluate max_regression_significant rules
+    for metric, max_reg in gate_rules["max_regression_significant"].items():
+        # Extract individual scores for this metric from both runs
+        baseline_metric_scores = stats.extract_metric_scores(
+            {"scores": baseline_scores}, metric
+        )
+        current_metric_scores = stats.extract_metric_scores(
+            {"scores": results_scores}, metric
+        )
+
+        # Perform significance test
+        significance_result = stats.test_significance(
+            baseline_metric_scores,
+            current_metric_scores,
+            alpha=significance_level
+        )
+
+        baseline_mean = significance_result["baseline_mean"]
+        current_mean = significance_result["current_mean"]
+        p_value = significance_result["p_value"]
+        significant = significance_result["significant"]
+        method = significance_result["method"]
+
+        # Calculate regression (baseline - current, so positive means current is worse)
+        regression = baseline_mean - current_mean if baseline_mean is not None and current_mean is not None else None
+
+        # Determine if gate passes:
+        # Fail ONLY if BOTH conditions are met:
+        # 1. Regression exceeds threshold (regression > max_reg)
+        # 2. Difference is statistically significant (significant == True)
+        if regression is None:
+            passed = False
+            significance_status = "missing data"
+        elif regression > max_reg and significant:
+            # Regression exceeds threshold AND is statistically significant -> FAIL
+            passed = False
+            significance_status = "significant"
+        else:
+            # Either:
+            # - Regression is within threshold (regression <= max_reg) -> PASS
+            # - Regression exceeds threshold but is NOT significant -> PASS
+            # - Missing data -> already handled above
+            passed = True
+            if regression is None:
+                significance_status = "missing data"
+            elif regression > max_reg:
+                significance_status = "not significant"
+            else:
+                significance_status = "within threshold"
+
+        # Format the additional info for display
+        if p_value is not None:
+            stat_info = f"p={p_value:.4f}"
+        else:
+            stat_info = f"method={method}"
+
+        add_row_with_significance(
+            metric,
+            "max_regression_significant",
+            max_reg,
+            current_mean,
+            baseline_mean,
+            passed,
+            regression,
+            significance_status,
+            stat_info
+        )
+
     # Build markdown table
-    lines = [
-        "| Metric | Rule | Current Value | Threshold | Baseline Value | Pass/Fail |",
-        "|---|---|---|---|---|---|",
-    ]
-    for metric, rule, current_str, threshold_str, baseline_str, result in rows:
-        lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {result} |")
+    # Check if we have any significance rows (they have 8 elements instead of 6)
+    has_significance_rows = len(rows) > 0 and len(rows[0]) == 8
+
+    if has_significance_rows:
+        lines = [
+            "| Metric | Rule | Current Value | Threshold | Baseline Value | Regression | Info | Pass/Fail |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for metric, rule, current_str, threshold_str, baseline_str, regression_str, extra_info, result in rows:
+            lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {regression_str} | {extra_info} | {result} |")
+    else:
+        lines = [
+            "| Metric | Rule | Current Value | Threshold | Baseline Value | Pass/Fail |",
+            "|---|---|---|---|---|---|",
+        ]
+        for metric, rule, current_str, threshold_str, baseline_str, result in rows:
+            lines.append(f"| {metric} | {rule} | {current_str} | {threshold_str} | {baseline_str} | {result} |")
 
     table = "\n".join(lines)
 
