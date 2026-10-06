@@ -381,6 +381,12 @@ The cache is keyed on the actual judge inputs (metric name, system prompt, user 
 
 Nothing left from the original blueprint - the current focus is polish, real-world hardening, and the first PyPI release. Ideas and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Feature 8: Statistical Significance Testing
+
+Version 0.12.0 introduces statistical significance testing to distinguish between real performance changes and noise caused by judge variance in LLM evaluations. This helps prevent false positives in quality gates where normal judge variability might be mistaken for a real regression.
+
+The new `--max-regression-significant` flag in `rageval gate` only fails a gate if a regression both exceeds the threshold AND is statistically significant (p < 0.05 by default). The `--with-significance` flag in `rageval compare` adds p-value columns to show whether observed differences are likely real or just noise.
+
 ## Why not Ragas / TruLens / DeepEval?
 
 Those are excellent, more full-featured tools. `rag-score` exists for the case where you want something smaller: a library you can read end-to-end in an afternoon, with an adapter interface that doesn't assume you're using any particular framework, and a set of metrics that work with zero API keys before you ever reach for an LLM judge.

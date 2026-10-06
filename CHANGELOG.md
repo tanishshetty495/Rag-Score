@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here.
 
+## [0.12.0] - 2026-10-06
+### Added
+- Statistical significance testing for regression detection (Feature 8):
+  - New `rag_score.stats` module with Welch's t-test and bootstrap confidence interval methods
+  - `--max-regression-significant` flag for `rageval gate`: only fails if regression exceeds threshold AND is statistically significant (p < alpha)
+  - `--significance-level` flag for `rageval gate`: configurable significance threshold (default: 0.05)
+  - `--with-significance` flag for `rageval compare`: adds p-value/significance columns to show whether differences are likely real or noise
+  - Falls back to bootstrap method when scipy is not installed (installed via `rag-score[stats]` extra)
+  - Handles degenerate cases (empty samples, single samples, zero variance) gracefully
+- Updated optional dependencies:
+  - Added `stats` extra containing `scipy>=1.10.0`
+  - Updated `all` and `dev` extras to include the stats dependency
+- Updated documentation:
+  - Added statistical significance testing section to README.md
+  - Expanded CI/CD integration guide with quality gates subsection covering statistical significance
+  - Updated CHANGELOG.md
+
+### Updated
+- Bumped version to 0.12.0.
+
 ## [0.11.0] - 2026-10-05
 ### Added
 - New CLI command: `rageval gate <results.json> --baseline <baseline.json>` to enforce quality gates in CI/CD pipelines.

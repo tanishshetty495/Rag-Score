@@ -86,6 +86,39 @@ max_regression:
 
 The `rageval gate` command compares the PR results against the main branch results and exits with a non-zero code if any rule fails, thereby failing the workflow and the pull request.
 
+### Statistical Significance Testing (Feature 8)
+
+Starting with version 0.12.0, `rageval gate` supports statistical significance testing to distinguish between real regressions and noise caused by judge variance. This helps prevent false positives where normal judge variability is mistaken for a real regression.
+
+To use statistical significance testing, add the `--max-regression-significant` flag instead of (or in addition to) `--max-regression`:
+
+```yaml
+# gate_config.yaml
+min_score:
+  faithfulness: 0.8
+max_regression_significant:
+  precision_at_5: 0.03  # Only fail if regression > 0.03 AND statistically significant
+```
+
+You can also adjust the significance level with the `--significance-level` flag (default: 0.05):
+
+```yaml
+# In your workflow step
+- name: Evaluate quality gates
+  id: gate
+  run: |
+    rageval gate ${{ needs.evaluate-pr.outputs.results-path }} ${{ needs.evaluate-main.outputs.results-path }} \
+      --max-regression-significant precision_at_5=0.03 \
+      --significance-level 0.05 \
+      --output ./gate-results.md
+```
+
+The gate will only fail if:
+1. The regression exceeds the threshold (baseline - current > value), AND
+2. The difference is statistically significant (p < significance level)
+
+This approach reduces false positives caused by judge variance while still catching real regressions.
+
 ## Customizing the Threshold
 
 You can adjust the threshold for what counts as an improvement or regression by using the `--threshold` flag in the `rageval compare` step:
