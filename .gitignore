@@ -12,3 +12,6 @@ dist/
 build/
 
 site/
+
+current.json
+ragscore_test/
