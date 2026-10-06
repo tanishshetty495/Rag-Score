@@ -13,7 +13,10 @@ import json
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from rag_score.judges.base import JudgeVerdict
 
 
 class JudgeCache(Protocol):

@@ -9,7 +9,7 @@ class JudgeHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/v1/chat/completions":
             content_length = int(self.headers["Content-Length"])
-            post_data = self.rfile.read(content_length)
+            _ = self.rfile.read(content_length)
             # We don't parse the request, just return a fixed verdict
             response = {
                 "id": "chatcmpl-123",
