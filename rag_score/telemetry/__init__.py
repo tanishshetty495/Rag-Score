@@ -1,24 +1,5 @@
 """
-Telemetry: token counting and cost estimation for evaluation runs.
-
-Token counts are estimated from the actual prompt/completion TEXT via
-tiktoken, not pulled from provider-reported usage - that's a
-deliberate choice, not a shortcut. Making this accurate would mean
-changing GeneratorAdapter.generate() to return a richer object
-(answer + usage metadata) instead of a plain string, which would
-break every existing adapter (Callable/LangChain/LlamaIndex) and every
-example/test written against the current interface. Text-based
-estimation costs nothing in compatibility and is accurate enough for
-tracking relative cost/usage trends across a run.
-
-tiktoken itself downloads its BPE encoding file from a CDN
-(openaipublic.blob.core.windows.net) on first use per model - a
-genuine problem for exactly the kind of offline/corporate-firewall
-environments this package's local-first philosophy targets (see
-judges/local_judge.py, judges/local_ml.py). count_tokens() therefore
-falls back to a dependency-free word-based estimate whenever tiktoken
-can't be used, rather than letting telemetry collection break an
-otherwise-successful evaluation run.
+Telemetry: token counting and cost evaluation for RAG evaluation.
 """
 
 from __future__ import annotations
@@ -104,3 +85,6 @@ def estimate_cost(
 
     prompt_price, completion_price = table[model_name]
     return (prompt_tokens / 1000) * prompt_price + (completion_tokens / 1000) * completion_price
+
+
+__all__ = ["TelemetryConfig", "count_tokens", "estimate_cost"]

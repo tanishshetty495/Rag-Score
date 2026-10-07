@@ -16,12 +16,7 @@ dummy API key.
 
 from __future__ import annotations
 
-from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
-
-# Ollama's default local server address - the vast majority of users
-# running this locally won't need to override it.
-_DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
 
 class LocalJudge(LLMJudge):
@@ -29,57 +24,50 @@ class LocalJudge(LLMJudge):
 
     def __init__(
         self,
-        model: str,
-        base_url: str = _DEFAULT_OLLAMA_BASE_URL,
-        api_key: str = "not-needed",
-        temperature: float = 0.0,
+        model: str = "llama3.1",
+        base_url: str | None = None,
+        api_key: str = "dummy",
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
-        cache: JudgeCache | None = None,
+        cache: "JudgeCache" | None = None,
     ) -> None:
-        """
-        model: the model name as your local server knows it, e.g.
-               "llama3.1" for Ollama or a served model id for vLLM.
-        base_url: the server's OpenAI-compatible endpoint. Defaults to
-                  Ollama's standard local address; override for vLLM,
-                  LM Studio, etc.
-        api_key: most local servers don't check this, but the OpenAI
-                 SDK requires a non-empty string to construct a client.
-        max_retries/retry_base_delay: useful even locally - a server
-                 that's still loading a model on first request can
-                 return a transient error that clears up within a
-                 couple seconds.
-        """
+        super().__init__(cache=cache)
+        self.model = model
+        # Default to Ollama's base URL if none provided
+        if base_url is None:
+            base_url = "http://localhost:11434/v1"
+        self.base_url = base_url
+        self.api_key = api_key
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
+
+        # Initialize the OpenAI client (lazy import to avoid hard dependency)
         try:
             from openai import AsyncOpenAI
         except ImportError as e:
             raise ImportError(
-                "The openai package is required for LocalJudge (it's used as "
-                "a client for any OpenAI-compatible endpoint, not to call "
-                "OpenAI's own API). Install it with: pip install rag-score[openai]"
+                "The local judge requires the openai package. "
+                "Install it with: pip install rag-score[local-ml]"
             ) from e
 
-        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        self.model = model
-        self.temperature = temperature
-        self.max_retries = max_retries
-        self.retry_base_delay = retry_base_delay
-        self.model_name = model
-        super().__init__(cache=cache)
+        self._client = AsyncOpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
+        # Make the API call
         response = await self._client.chat.completions.create(
             model=self.model,
-            temperature=self.temperature,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            temperature=0,  # For deterministic outputs
         )
+
+        # Extract the text content
         content = response.choices[0].message.content
         if content is None:
-            raise ValueError(
-                f"Local judge at {self._client.base_url} returned an empty response. "
-                f"Check that the server is running and '{self.model}' is available."
-            )
+            raise ValueError("empty response")
         return content

@@ -23,8 +23,6 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field
 
-from rag_score.cache import JudgeCache
-
 
 class JudgeVerdict(BaseModel):
     """A judge's verdict on one generation-quality question: a 0-1
@@ -55,7 +53,7 @@ class LLMJudge(ABC):
     max_retries: int = 2
     retry_base_delay: float = 1.0
 
-    def __init__(self, cache: JudgeCache | None = None) -> None:
+    def __init__(self, cache: "JudgeCache" | None = None) -> None:
         self.cache = cache
 
     @abstractmethod
@@ -96,6 +94,7 @@ class LLMJudge(ABC):
 
         Subclasses must set `provider` and `model_name` attributes.
         """
+        # Import locally to avoid circular imports
         from rag_score.cache import _make_cache_key
 
         return _make_cache_key(

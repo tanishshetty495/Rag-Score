@@ -1,17 +1,5 @@
 """
-Synthetic test-set generation.
-
-The biggest friction point in adopting an eval tool is writing the
-test set by hand. This module removes that: chunk your existing docs,
-have an LLM judge generate a question + ground-truth answer per chunk,
-and get a real test_set.json out - the exact TestCase shape the rest
-of the library already expects, so synthesized output plugs straight
-into load_dataset() and every metric with zero glue code.
-
-Deliberately reuses LLMJudge rather than inventing a separate
-"generator" concept - any judge (OpenAI, Anthropic, local Ollama) that
-already works for scoring also works for synthesis, since both are
-just "send a prompt, parse structured JSON back".
+Synthetic test set generation for RAG evaluation.
 """
 
 from __future__ import annotations
@@ -331,3 +319,6 @@ async def synthesize_test_set(
             report.errors.append(f"{chunk_doc_id}: {error}")
 
     return report
+
+# Re-export the public items
+__all__ = ["synthesize_test_set"]

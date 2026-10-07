@@ -8,7 +8,6 @@ never requires the openai SDK.
 
 from __future__ import annotations
 
-from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
 
 
@@ -19,39 +18,42 @@ class OpenAIJudge(LLMJudge):
         self,
         model: str = "gpt-4o-mini",
         api_key: str | None = None,
-        temperature: float = 0.0,
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
-        cache: JudgeCache | None = None,
+        temperature: float = 0.0,
+        cache: "JudgeCache" | None = None,
     ) -> None:
+        super().__init__(cache=cache)
+        self.model = model
+        self.api_key = api_key
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
+        self.temperature = temperature
+
+        # Initialize the OpenAI client (lazy import to avoid hard dependency)
         try:
             from openai import AsyncOpenAI
         except ImportError as e:
             raise ImportError(
-                "The openai package is required for OpenAIJudge. "
+                "The openai judge requires the openai package. "
                 "Install it with: pip install rag-score[openai]"
             ) from e
 
-        # api_key=None lets the SDK fall back to the OPENAI_API_KEY
-        # env var itself - no need to duplicate that lookup here.
         self._client = AsyncOpenAI(api_key=api_key)
-        self.model = model
-        self.temperature = temperature
-        self.max_retries = max_retries
-        self.retry_base_delay = retry_base_delay
-        self.model_name = model
-        super().__init__(cache=cache)
 
     async def complete(self, system_prompt: str, user_prompt: str) -> str:
+        # Make the API call
         response = await self._client.chat.completions.create(
             model=self.model,
-            temperature=self.temperature,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            temperature=self.temperature,  # For deterministic outputs
         )
+
+        # Extract the text content
         content = response.choices[0].message.content
         if content is None:
-            raise ValueError("OpenAI judge returned an empty response")
+            raise ValueError("empty response")
         return content
