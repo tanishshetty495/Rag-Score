@@ -7,6 +7,7 @@ when this class is actually instantiated.
 
 from __future__ import annotations
 
+from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
 
 
@@ -20,7 +21,7 @@ class AnthropicJudge(LLMJudge):
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
         max_tokens: int = 512,
-        cache: "JudgeCache" | None = None,
+        cache: JudgeCache | None = None,
     ) -> None:
         super().__init__(cache=cache)
         self.model = model
