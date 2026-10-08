@@ -5,17 +5,17 @@ These are stdlib-only dataclasses (no pydantic) for internal use.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
 class RetrievedChunk:
     """A retrieved chunk with document ID, text, and optional score."""
-    doc_id: Optional[str] = None
+
+    doc_id: str | None = None
     text: str = ""
-    score: Optional[float] = None
+    score: float | None = None
 
 
 @dataclass
@@ -24,14 +24,15 @@ class EvaluationCase:
     Internal representation of a test case.
     Convertible to and from the existing TestCase type.
     """
+
     id: str
     question: str
-    contexts: List[str] = field(default_factory=list)
-    answer: Optional[str] = None
-    reference: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    contexts: list[str] = field(default_factory=list)
+    answer: str | None = None
+    reference: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary suitable for JSON serialization."""
         return {
             "id": self.id,
@@ -43,7 +44,7 @@ class EvaluationCase:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EvaluationCase":
+    def from_dict(cls, data: dict[str, Any]) -> EvaluationCase:
         """Create an EvaluationCase from a dictionary."""
         return cls(
             id=data["id"],
@@ -54,7 +55,7 @@ class EvaluationCase:
             metadata=data.get("metadata", {}),
         )
 
-    def to_test_case(self):
+    def to_test_case(self) -> TestCase:
         """
         Convert to the existing TestCase type (from rag_score.core.types).
         Note: This imports TestCase to avoid circular dependencies at runtime.
@@ -83,7 +84,7 @@ class EvaluationCase:
         )
 
     @classmethod
-    def from_test_case(cls, test_case) -> "EvaluationCase":
+    def from_test_case(cls, test_case: TestCase) -> EvaluationCase:
         """
         Create an EvaluationCase from the existing TestCase type.
         """
@@ -110,17 +111,18 @@ class EvaluationResult:
     Internal representation of the output of running an EvaluationCase through a pipeline.
     Convertible to and from the existing EvalResult type.
     """
+
     evaluation_id: str
     case_id: str
-    retrieved_contexts: List[RetrievedChunk] = field(default_factory=list)
-    generated_answer: Optional[str] = None
-    retrieval_latency_ms: Optional[float] = None
-    generation_latency_ms: Optional[float] = None
-    total_tokens: Optional[int] = None
-    estimated_cost_usd: Optional[float] = None
-    error: Optional[str] = None
+    retrieved_contexts: list[RetrievedChunk] = field(default_factory=list)
+    generated_answer: str | None = None
+    retrieval_latency_ms: float | None = None
+    generation_latency_ms: float | None = None
+    total_tokens: int | None = None
+    estimated_cost_usd: float | None = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary suitable for JSON serialization."""
         return {
             "evaluation_id": self.evaluation_id,
@@ -142,7 +144,7 @@ class EvaluationResult:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EvaluationResult":
+    def from_dict(cls, data: dict[str, Any]) -> EvaluationResult:
         """Create an EvaluationResult from a dictionary."""
         retrieved_chunks = [
             RetrievedChunk(
@@ -164,7 +166,7 @@ class EvaluationResult:
             error=data.get("error"),
         )
 
-    def to_eval_result(self):
+    def to_eval_result(self) -> EvalResult:
         """
         Convert to the existing EvalResult type (from rag_score.core.types).
         """
@@ -184,7 +186,7 @@ class EvaluationResult:
         )
 
     @classmethod
-    def from_eval_result(cls, eval_result) -> "EvaluationResult":
+    def from_eval_result(cls, eval_result: EvalResult) -> EvaluationResult:
         """
         Create an EvaluationResult from the existing EvalResult type.
         """
@@ -207,13 +209,14 @@ class MetricResult:
     Internal representation of a metric's score on an EvaluationResult.
     Convertible to and from the existing MetricScore type.
     """
+
     score_id: str
     evaluation_id: str
     metric_name: str
     score_value: float
-    judge_reasoning: Optional[str] = None
+    judge_reasoning: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to a dictionary suitable for JSON serialization."""
         return {
             "score_id": self.score_id,
@@ -224,7 +227,7 @@ class MetricResult:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MetricResult":
+    def from_dict(cls, data: dict[str, Any]) -> MetricResult:
         """Create a MetricResult from a dictionary."""
         return cls(
             score_id=data["score_id"],
@@ -234,7 +237,7 @@ class MetricResult:
             judge_reasoning=data.get("judge_reasoning"),
         )
 
-    def to_metric_score(self):
+    def to_metric_score(self) -> MetricScore:
         """
         Convert to the existing MetricScore type (from rag_score.core.types).
         """
@@ -249,7 +252,7 @@ class MetricResult:
         )
 
     @classmethod
-    def from_metric_score(cls, metric_score) -> "MetricResult":
+    def from_metric_score(cls, metric_score: MetricScore) -> MetricResult:
         """
         Create a MetricResult from the existing MetricScore type.
         """
@@ -267,11 +270,12 @@ class Failure:
     """
     Stub for a failure case (to be implemented later).
     """
+
     message: str = "Failure details to be implemented"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"message": self.message}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Failure":
+    def from_dict(cls, data: dict[str, Any]) -> Failure:
         return cls(message=data.get("message", "Failure details to be implemented"))

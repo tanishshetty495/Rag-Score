@@ -54,7 +54,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/tanishshetty495/Rag-Score"
 Repository = "https://github.com/tanishshetty495/Rag-Score"
-Issues = "https://github.com/tanishshetty495/Rag-Score/issues"
+Issues = "https://github.com/tanishshetty495/Rag-Score"
 
 [project.scripts]
 rageval = "rag_score.cli:main"
@@ -65,3 +65,22 @@ packages = ["rag_score"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+hide_error_codes = false
+ignore_missing_imports = true
+follow_imports = "silent"
+
+[[tool.mypy.overrides]]
+module = [
+    "rag_score.core.models",
+    "rag_score.core.metric",
+    "rag_score.metrics.retrieval.hit_rate_at_k",
+    "rag_score.metrics.retrieval.context_coverage",
+    "rag_score.metrics.generation.citation_correctness",
+    "rag_score.metrics.generation.citation_completeness",
+    "rag_score.metrics.generation.no_answer_abstention"
+]
+strict = true

@@ -54,7 +54,7 @@ class AnthropicJudge(LLMJudge):
         )
 
         # Extract text content from all text blocks
-        text_blocks = [block.text for block in response.content if hasattr(block, 'text')]
+        text_blocks = [block.text for block in response.content if hasattr(block, "text")]
         if not text_blocks:
             raise ValueError("no text")
         content = "".join(text_blocks)

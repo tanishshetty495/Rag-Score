@@ -55,7 +55,11 @@ from rag_score.judges.anthropic_judge import AnthropicJudge
 from rag_score.judges.base import JudgeVerdict, LLMJudge
 from rag_score.judges.local_judge import LocalJudge
 from rag_score.judges.openai_judge import OpenAIJudge
+
+# Metrics - Generation
 from rag_score.metrics.generation.answer_relevance import AnswerRelevance
+from rag_score.metrics.generation.citation_completeness import CitationCompleteness
+from rag_score.metrics.generation.citation_correctness import CitationCorrectness
 from rag_score.metrics.generation.context_carry_over import ContextCarryOver
 from rag_score.metrics.generation.context_precision import ContextPrecision
 from rag_score.metrics.generation.faithfulness import Faithfulness
@@ -65,8 +69,11 @@ from rag_score.metrics.generation.local_answer_relevance import (
 from rag_score.metrics.generation.local_faithfulness import (
     LocalSemanticFaithfulness,
 )
+from rag_score.metrics.generation.no_answer_abstention import NoAnswerAbstention
+from rag_score.metrics.retrieval.context_coverage import ContextCoverage
+from rag_score.metrics.retrieval.hit_rate_at_k import HitRateAtK
 
-# Metrics
+# Metrics - Retrieval
 from rag_score.metrics.retrieval.mrr import MRR
 from rag_score.metrics.retrieval.ndcg import NDCG
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
@@ -88,13 +95,17 @@ __all__ = [
     "AnswerRelevance",
     "AnthropicJudge",
     "CacheConfig",
+    "CitationCompleteness",
+    "CitationCorrectness",
     "ContextCarryOver",
+    "ContextCoverage",
     "ContextPrecision",
     "DimRun",
     "DimTestCase",
     "EvalResult",
     "Faithfulness",
     "FileCacheBackend",
+    "HitRateAtK",
     "InMemoryCacheBackend",
     "JudgeCache",
     "JudgeVerdict",
@@ -102,6 +113,7 @@ __all__ = [
     "LocalJudge",
     "LocalSemanticAnswerRelevance",
     "LocalSemanticFaithfulness",
+    "NoAnswerAbstention",
     "OpenAIJudge",
     "PrecisionAtK",
     "RecallAtK",
