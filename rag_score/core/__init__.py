@@ -16,13 +16,13 @@ from rag_score.core.types import (
 )
 
 __all__ = [
-    "TestCase",
+    "DimRun",
+    "DimTestCase",
     "EvalResult",
     "FactEvaluation",
     "FactMetricScore",
-    "load_dataset",
     "RunConfig",
+    "TestCase",
+    "load_dataset",
     "run_evaluation",
-    "DimRun",
-    "DimTestCase",
 ]

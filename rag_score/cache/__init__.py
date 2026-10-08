@@ -5,12 +5,10 @@ Response caching for LLM judges in RAG evaluation.
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -41,12 +39,10 @@ class BaseCacheBackend(ABC):
     @abstractmethod
     def get(self, key: str) -> str | None:
         """Get a value from the cache."""
-        pass
 
     @abstractmethod
     def set(self, key: str, value: str) -> None:
         """Set a value in the cache."""
-        pass
 
 
 class InMemoryCacheBackend(BaseCacheBackend):
@@ -139,9 +135,9 @@ def get_cache_backend(config: CacheConfig | None = None) -> CacheBackend:
 
 
 __all__ = [
-    "JudgeCache",
-    "InMemoryCacheBackend",
-    "FileCacheBackend",
     "CacheConfig",
+    "FileCacheBackend",
+    "InMemoryCacheBackend",
+    "JudgeCache",
     "get_cache_backend",
 ]

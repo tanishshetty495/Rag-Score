@@ -82,6 +82,11 @@ def test_public_api_all():
         "DimRun",
         "DimTestCase",
         # Metrics
+        "CitationCompleteness",
+        "CitationCorrectness",
+        "ContextCoverage",
+        "HitRateAtK",
+        "NoAnswerAbstention",
         "PrecisionAtK",
         "RecallAtK",
         "MRR",

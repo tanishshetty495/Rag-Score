@@ -9,7 +9,7 @@ from rag_score.agentic.metrics.tool_selection_precision import ToolSelectionPrec
 from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
 
 __all__ = [
-    "ToolSelectionRecall",
-    "ToolSelectionPrecision",
     "ToolCallOrderCorrectness",
+    "ToolSelectionPrecision",
+    "ToolSelectionRecall",
 ]

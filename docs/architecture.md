@@ -174,36 +174,51 @@ Everything that can be imported from the `rag_score` package:
 ```python
 # Core
 from rag_score import (
-    TestCase, EvalResult, MetricScore,
+    TestCase,
+    EvalResult,
+    MetricScore,
     load_dataset,
-    RunConfig, run_evaluation,
-    DimRun, DimTestCase, FactEvaluation, FactMetricScore
+    RunConfig,
+    run_evaluation,
+    DimRun,
+    DimTestCase,
+    FactEvaluation,
+    FactMetricScore,
 )
 
 # Metrics
 from rag_score.metrics import (
-    PrecisionAtK, RecallAtK, MRR, NDCG,
-    Faithfulness, AnswerRelevance, ContextPrecision, ContextCarryOver,
-    LocalFaithfulness, LocalAnswerRelevance
+    PrecisionAtK,
+    RecallAtK,
+    MRR,
+    NDCG,
+    Faithfulness,
+    AnswerRelevance,
+    ContextPrecision,
+    ContextCarryOver,
+    LocalFaithfulness,
+    LocalAnswerRelevance,
 )
 
 # Agentic
 from rag_score.agentic import (
-    TrajectoryTestCase, TrajectoryEvalResult,
-    ToolSelectionRecall, ToolSelectionPrecision, ToolCallOrderCorrectness
+    TrajectoryTestCase,
+    TrajectoryEvalResult,
+    ToolSelectionRecall,
+    ToolSelectionPrecision,
+    ToolCallOrderCorrectness,
 )
 
 # Judges
-from rag_score.judges import (
-    LLMJudge, JudgeVerdict,
-    OpenAIJudge, AnthropicJudge, LocalJudge
-)
+from rag_score.judges import LLMJudge, JudgeVerdict, OpenAIJudge, AnthropicJudge, LocalJudge
 
 # Export
 from rag_score.export import (
     export_to_sqlite,
-    results_to_dataframe, scores_to_dataframe,
-    scores_to_wide_dataframe, full_report_dataframe
+    results_to_dataframe,
+    scores_to_dataframe,
+    scores_to_wide_dataframe,
+    full_report_dataframe,
 )
 
 # Report
@@ -214,14 +229,15 @@ from rag_score.synthesize import synthesize_test_set
 
 # Cache
 from rag_score.cache import (
-    JudgeCache, InMemoryCacheBackend, FileCacheBackend,
-    CacheConfig, get_cache_backend
+    JudgeCache,
+    InMemoryCacheBackend,
+    FileCacheBackend,
+    CacheConfig,
+    get_cache_backend,
 )
 
 # Telemetry
-from rag_score.telemetry import (
-    TelemetryConfig, count_tokens, estimate_cost
-)
+from rag_score.telemetry import TelemetryConfig, count_tokens, estimate_cost
 ```
 
 ### CLI API

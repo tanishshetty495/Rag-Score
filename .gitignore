@@ -15,3 +15,6 @@ site/
 
 current.json
 ragscore_test/
+PR_DESCRIPTION.md
+PR2_DESCRIPTION.md
+.venv-check

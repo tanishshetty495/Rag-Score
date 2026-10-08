@@ -16,6 +16,7 @@ dummy API key.
 
 from __future__ import annotations
 
+from rag_score.cache import JudgeCache
 from rag_score.judges.base import LLMJudge
 
 
@@ -29,7 +30,7 @@ class LocalJudge(LLMJudge):
         api_key: str = "dummy",
         max_retries: int = 2,
         retry_base_delay: float = 1.0,
-        cache: "JudgeCache" | None = None,
+        cache: JudgeCache | None = None,
     ) -> None:
         super().__init__(cache=cache)
         self.model = model
