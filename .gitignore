@@ -18,3 +18,10 @@ ragscore_test/
 PR_DESCRIPTION.md
 PR2_DESCRIPTION.md
 .venv-check
+
+PR*_PROMPT.md
+PR*_DESCRIPTION.md
+.venv-check/
+
+PR*_PROMPT.md
+PR*_DESCRIPTION.md
