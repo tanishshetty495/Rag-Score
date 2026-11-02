@@ -6,7 +6,10 @@ These are stdlib-only dataclasses (no pydantic) for internal use.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from rag_score.core.types import EvalResult, MetricScore, TestCase
 
 
 @dataclass
