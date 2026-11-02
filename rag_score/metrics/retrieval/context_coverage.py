@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 
 from rag_score.core.metric import Metric
-from rag_score.core.models import EvaluationCase
+from rag_score.core.models import EvaluationCase, MetricResult
 
 
 def _extract_key_facts(text: str) -> set[str]:

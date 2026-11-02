@@ -9,7 +9,7 @@ one of the "offline-first" metrics that works with zero API keys.
 from __future__ import annotations
 
 from rag_score.core.metric import Metric
-from rag_score.core.models import EvaluationCase
+from rag_score.core.models import EvaluationCase, MetricResult
 
 
 class HitRateAtK(Metric):
