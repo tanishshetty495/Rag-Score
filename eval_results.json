@@ -5,9 +5,9 @@
   },
   "results": [
     {
-      "evaluation_id": "92d4fe9b-4673-4f2a-be6f-34191cb2096a",
+      "evaluation_id": "ad2e23eb-9fd1-4c26-bb77-93c83e2d4b91",
       "run_id": "run-eval_config",
-      "test_case_id": "63bc8c24-613a-4c07-aaa0-3961315a13b5",
+      "test_case_id": "51c87133-0dfd-460d-8df0-00366591e99b",
       "retrieved_context": [
         {
           "doc_id": "doc_1",
@@ -16,8 +16,8 @@
         }
       ],
       "generated_answer": "The answer is apples.",
-      "retrieval_latency_ms": 0.011600001016631722,
-      "generation_latency_ms": 0.0023000029614195228,
+      "retrieval_latency_ms": 0.016599995433352888,
+      "generation_latency_ms": 0.002900007530115545,
       "total_tokens": null,
       "estimated_cost_usd": null,
       "error": null
@@ -25,8 +25,8 @@
   ],
   "scores": [
     {
-      "score_id": "1eddc138-122e-4633-bcde-ae23ac73a34a",
-      "evaluation_id": "92d4fe9b-4673-4f2a-be6f-34191cb2096a",
+      "score_id": "0627d8e9-324f-4df5-9360-3ab6369fbe56",
+      "evaluation_id": "ad2e23eb-9fd1-4c26-bb77-93c83e2d4b91",
       "metric_name": "precision_at_5",
       "score_value": 1.0,
       "judge_reasoning": null

@@ -66,11 +66,18 @@ class CallableGeneratorAdapter(GeneratorAdapter):
 
     def __init__(self, fn) -> None:
         self._fn = fn
+        # Check if the wrapped function accepts a 'history' parameter
+        import inspect
+        self._accepts_history = "history" in inspect.signature(fn).parameters
 
-    async def generate(self, query: str, context: list[RetrievedChunk]) -> str:
+    async def generate(self, query: str, context: list[RetrievedChunk], history=None) -> str:
         import inspect
 
-        result = self._fn(query, context)
+        # Pass history to the wrapped function if it accepts it
+        if self._accepts_history and history is not None:
+            result = self._fn(query, context, history=history)
+        else:
+            result = self._fn(query, context)
         if inspect.isawaitable(result):
             result = await result
         return result
