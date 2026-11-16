@@ -329,7 +329,7 @@ def _write_github_step_summary(
 
 
 @click.group()
-@click.version_option(package_name="rag-score")
+@click.version_option(package_name="ragmark")
 def cli() -> None:
     """rag-score: framework-agnostic RAG evaluation, zero lock-in."""
 

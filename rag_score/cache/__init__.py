@@ -11,6 +11,21 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 
+def _make_cache_key(
+    metric_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    provider: str,
+    model_name: str,
+) -> str:
+    """Create a deterministic cache key from judge inputs and identity."""
+    # Hash the prompts to avoid excessively long keys
+    prompt_hash = hashlib.sha256(
+        f"{system_prompt}\n{user_prompt}".encode()
+    ).hexdigest()[:16]
+    return f"{provider}:{model_name}:{metric_name}:{prompt_hash}"
+
+
 @runtime_checkable
 class CacheBackend(Protocol):
     """Protocol for cache backends."""
@@ -139,5 +154,6 @@ __all__ = [
     "FileCacheBackend",
     "InMemoryCacheBackend",
     "JudgeCache",
+    "_make_cache_key",
     "get_cache_backend",
 ]

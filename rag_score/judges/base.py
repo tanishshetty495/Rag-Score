@@ -77,9 +77,10 @@ class LLMJudge(ABC):
         if self.cache is not None:
             # Compute cache key from the judge inputs and identity
             key = self._cache_key(system_prompt, user_prompt)
-            cached_verdict = await self.cache.get(key)
+            cached_verdict = self.cache.get(key)
             if cached_verdict is not None:
-                return cached_verdict
+                # Deserialize the cached verdict
+                return JudgeVerdict.model_validate_json(cached_verdict)
 
         # Cache miss or caching disabled: get a fresh verdict
         raw = await self._complete_with_retry(system_prompt, user_prompt)
@@ -87,14 +88,15 @@ class LLMJudge(ABC):
 
         # Store the verdict in cache if caching is enabled and the verdict is valid
         if self.cache is not None:
-            await self.cache.set(key, verdict)
+            # Serialize the verdict for storage
+            self.cache.set(key, verdict.model_dump_json())
 
         return verdict
 
     def _cache_key(self, system_prompt: str, user_prompt: str) -> str:
         """Create a cache key for the given prompts and this judge's identity.
 
-        Subclasses must set `provider` and `model_name` attributes.
+        Subclasses must set `provider` and `model` attributes.
         """
         # Import locally to avoid circular imports
         from rag_score.cache import _make_cache_key
@@ -104,7 +106,7 @@ class LLMJudge(ABC):
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             provider=self.provider,  # type: ignore[attr-defined]
-            model_name=self.model_name,  # type: ignore[attr-defined]
+            model_name=self.model,  # type: ignore[attr-defined]
         )
 
     async def _complete_with_retry(self, system_prompt: str, user_prompt: str) -> str:
