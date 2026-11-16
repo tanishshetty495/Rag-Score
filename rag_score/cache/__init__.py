@@ -154,6 +154,6 @@ __all__ = [
     "FileCacheBackend",
     "InMemoryCacheBackend",
     "JudgeCache",
-    "get_cache_backend",
     "_make_cache_key",
+    "get_cache_backend",
 ]

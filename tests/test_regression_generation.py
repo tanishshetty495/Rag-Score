@@ -4,6 +4,10 @@ Regression/golden tests for generation metrics using FakeJudge (no network/API k
 
 from __future__ import annotations
 
+# Import the FakeJudge from conftest
+import sys
+from pathlib import Path
+
 import pytest
 
 from rag_score.core.models import EvaluationCase
@@ -18,9 +22,6 @@ from rag_score.metrics.generation.local_answer_relevance import LocalSemanticAns
 from rag_score.metrics.generation.local_faithfulness import LocalSemanticFaithfulness
 from rag_score.metrics.generation.no_answer_abstention import NoAnswerAbstention
 
-# Import the FakeJudge from conftest
-import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from conftest import FakeJudge
 

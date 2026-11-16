@@ -16,21 +16,21 @@ from __future__ import annotations
 
 import pytest
 
-from rag_score.core.models import EvaluationCase, MetricResult
-from rag_score.core.types import RetrievedChunk, TestCase, EvalResult
+from rag_score.agentic.metrics.tool_call_order import ToolCallOrderCorrectness
+from rag_score.agentic.metrics.tool_selection_precision import ToolSelectionPrecision
+from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
+from rag_score.agentic.types import ToolCall, TrajectoryEvalResult, TrajectoryTestCase
+from rag_score.core.models import EvaluationCase
+from rag_score.core.types import EvalResult, RetrievedChunk, TestCase
+from rag_score.metrics.generation.citation_completeness import CitationCompleteness
+from rag_score.metrics.generation.citation_correctness import CitationCorrectness
+from rag_score.metrics.generation.no_answer_abstention import NoAnswerAbstention
 from rag_score.metrics.retrieval.context_coverage import ContextCoverage
 from rag_score.metrics.retrieval.hit_rate_at_k import HitRateAtK
 from rag_score.metrics.retrieval.mrr import MRR
 from rag_score.metrics.retrieval.ndcg import NDCG
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 from rag_score.metrics.retrieval.recall_at_k import RecallAtK
-from rag_score.metrics.generation.no_answer_abstention import NoAnswerAbstention
-from rag_score.metrics.generation.citation_completeness import CitationCompleteness
-from rag_score.metrics.generation.citation_correctness import CitationCorrectness
-from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
-from rag_score.agentic.metrics.tool_selection_precision import ToolSelectionPrecision
-from rag_score.agentic.metrics.tool_call_order import ToolCallOrderCorrectness
-from rag_score.agentic.types import ToolCall, TrajectoryTestCase, TrajectoryEvalResult
 
 
 class TestRetrievalEdgeCases:
@@ -479,8 +479,8 @@ class TestZeroTestCases:
     @pytest.mark.asyncio
     async def test_empty_dataset_handling(self):
         """Empty dataset handling works."""
+        from rag_score.adapters.base import CallableGeneratorAdapter, CallableRetrieverAdapter
         from rag_score.core.runner import RunConfig, run_evaluation
-        from rag_score.adapters.base import CallableRetrieverAdapter, CallableGeneratorAdapter
         from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 
         async def dummy_retrieve(query: str, top_k: int = 5):
@@ -514,19 +514,16 @@ class TestMalformedJudgeResponse:
     async def test_judge_returns_non_json(self):
         """Judge returning non-JSON is handled."""
         # This is tested in test_regression_judge.py - just ensure it doesn't crash
-        pass
 
     @pytest.mark.asyncio
     async def test_judge_returns_missing_score(self):
         """Judge returning JSON without score key is handled."""
         # This is tested in test_regression_judge.py
-        pass
 
     @pytest.mark.asyncio
     async def test_judge_returns_score_out_of_range(self):
         """Judge returning score > 1 is clamped."""
         # This is tested in test_regression_judge.py
-        pass
 
 
 class TestSpecialCharacters:

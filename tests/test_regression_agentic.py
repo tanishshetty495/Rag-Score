@@ -9,7 +9,7 @@ import pytest
 from rag_score.agentic.metrics.tool_call_order import ToolCallOrderCorrectness
 from rag_score.agentic.metrics.tool_selection_precision import ToolSelectionPrecision
 from rag_score.agentic.metrics.tool_selection_recall import ToolSelectionRecall
-from rag_score.agentic.types import ToolCall, TrajectoryTestCase, TrajectoryEvalResult
+from rag_score.agentic.types import ToolCall, TrajectoryEvalResult, TrajectoryTestCase
 
 
 class TestToolSelectionRecallRegression:

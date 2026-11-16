@@ -9,11 +9,12 @@ Regression/golden tests for the evaluation runner behavior:
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from rag_score.adapters.base import CallableGeneratorAdapter, CallableRetrieverAdapter
 from rag_score.core.runner import RunConfig, run_evaluation
-from rag_score.core.types import EvalResult, RetrievedChunk, TestCase
+from rag_score.core.types import RetrievedChunk, TestCase
 from rag_score.metrics.retrieval.precision_at_k import PrecisionAtK
 
 
@@ -31,8 +32,7 @@ class TestRunnerConcurrencyRegression:
             nonlocal max_concurrent
             async with lock:
                 call_times.append(asyncio.get_event_loop().time())
-                if len(call_times) > max_concurrent:
-                    max_concurrent = len(call_times)
+                max_concurrent = max(max_concurrent, len(call_times))
             await asyncio.sleep(0.1)
             async with lock:
                 call_times.pop()

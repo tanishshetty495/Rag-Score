@@ -7,11 +7,10 @@ Regression/golden tests for LLM judges:
 
 from __future__ import annotations
 
-import asyncio
 import pytest
 
-from rag_score.judges.base import LLMJudge, JudgeVerdict
-from rag_score.cache import InMemoryCacheBackend, JudgeCache
+from rag_score.cache import InMemoryCacheBackend
+from rag_score.judges.base import JudgeVerdict, LLMJudge
 
 
 class FakeJudgeWithRetry(LLMJudge):
@@ -139,14 +138,14 @@ class TestJudgeJSONFenceStrippingRegression:
     async def test_malformed_json_raises(self):
         """Malformed JSON raises an error."""
         judge = FakeJudgeBadJSON('not json at all')
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="Response was not valid JSON"):
             await judge.judge("system", "user")
 
     @pytest.mark.asyncio
     async def test_missing_score_key_raises(self):
         """Missing score key raises an error."""
         judge = FakeJudgeBadJSON('{"reasoning": "No score"}')
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="missing 'score'"):
             await judge.judge("system", "user")
 
     @pytest.mark.asyncio
@@ -251,7 +250,8 @@ class TestJudgeVerdictRegression:
 
     def test_verdict_reasoning_required(self):
         """JudgeVerdict requires reasoning field (not optional)."""
-        with pytest.raises(Exception):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
             JudgeVerdict(score=0.5)  # missing reasoning
 
     def test_verdict_mutable(self):

@@ -11,17 +11,11 @@ import sqlite3
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
-
-import pytest
 
 from rag_score.core.runner import RunReport
 from rag_score.core.types import (
     DimRun,
-    DimTestCase,
     EvalResult,
-    FactEvaluation,
-    FactMetricScore,
     MetricScore,
     RetrievedChunk,
     TestCase,

@@ -8,6 +8,7 @@ Regression/golden tests for framework adapters:
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from rag_score.adapters.base import (
